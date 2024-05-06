@@ -131,11 +131,31 @@ impl Zeroize for PathScanRequestDescriptorTrio {
 impl ZeroizeOnDrop for PathScanRequestDescriptorTrio {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PathScanResultDescriptorTrio(pub DerivationPath, pub ScanTxOutResult, pub(crate) Descriptor<PublicKey>);
+pub struct PathScanResultDescriptorTrio(
+    pub(crate) DerivationPath,
+    pub(crate) ScanTxOutResult,
+    pub(crate) Descriptor<PublicKey>,
+);
 
 impl PathScanResultDescriptorTrio {
-    pub fn new(path: DerivationPath, scan_result: ScanTxOutResult, descriptor: Descriptor<PublicKey>) -> Self {
+    pub fn new(
+        path: DerivationPath,
+        scan_result: ScanTxOutResult,
+        descriptor: Descriptor<PublicKey>,
+    ) -> Self {
         PathScanResultDescriptorTrio(path, scan_result, descriptor)
+    }
+
+    pub fn get_derivation_path(&self) -> DerivationPath {
+        self.0.clone()
+    }
+
+    pub fn get_scan_result(&self) -> ScanTxOutResult {
+        self.1.clone()
+    }
+
+    pub fn get_descriptor(&self) -> Descriptor<PublicKey> {
+        self.2.clone()
     }
 }
 

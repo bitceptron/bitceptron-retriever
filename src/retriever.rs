@@ -20,7 +20,7 @@ pub struct Retriever {
     data_dir: String,
     dump_result: Option<DumpTxoutSetResult>,
     finds: Option<Vec<PathDescriptorPair>>,
-    pub detailed_finds: Option<Vec<PathScanResultDescriptorTrio>>,
+    detailed_finds: Option<Vec<PathScanResultDescriptorTrio>>,
 }
 
 impl Retriever {
@@ -106,7 +106,7 @@ impl Retriever {
         for (index, detail) in self.detailed_finds.as_ref().unwrap().iter().enumerate() {
             let info = format!(
                 "\nResult {}\nPath: {}\nAmount(satoshis): {}\nDescriptor: {}",
-                index,
+                index + 1,
                 detail.0.to_string(),
                 detail
                     .1
@@ -118,6 +118,14 @@ impl Retriever {
             println!("{info}");
         }
         Ok(())
+    }
+
+    pub fn get_detailed_finds(&self) -> Result<Vec<PathScanResultDescriptorTrio>, RetrieverError> {
+        if self.detailed_finds.is_none() {
+            Err(RetrieverError::DetailsHaveNotBeenFetched)
+        } else {
+            Ok(self.detailed_finds.as_ref().unwrap().to_owned())
+        }
     }
 }
 

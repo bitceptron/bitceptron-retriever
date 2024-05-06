@@ -1,24 +1,28 @@
+use config::Config;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use crate::{client::client_setting::ClientSetting, explorer::explorer_setting::ExplorerSetting};
+use crate::{
+    client::client_setting::ClientSetting, error::RetrieverError,
+    explorer::explorer_setting::ExplorerSetting,
+};
 
 #[derive(Debug, Serialize, Deserialize, Getters, Default)]
 #[get = "pub with_prefix"]
 pub struct RetrieverSetting {
-    pub bitcoincore_rpc_url: Option<String>,
-    pub bitcoincore_rpc_port: Option<String>,
-    pub bitcoincore_rpc_cookie_path: String,
-    pub bitcoincore_rpc_timeout_seconds: Option<u64>,
-    pub mnemonic: Option<String>,
-    pub passphrase: Option<String>,
-    pub base_derivation_paths: Option<Vec<String>>,
-    pub exploration_path: Option<String>,
-    pub sweep: Option<bool>,
-    pub exploration_depth: Option<u32>,
-    pub network: Option<bitcoin::Network>,
-    pub data_dir: String,
+    bitcoincore_rpc_url: Option<String>,
+    bitcoincore_rpc_port: Option<String>,
+    bitcoincore_rpc_cookie_path: String,
+    bitcoincore_rpc_timeout_seconds: Option<u64>,
+    mnemonic: Option<String>,
+    passphrase: Option<String>,
+    base_derivation_paths: Option<Vec<String>>,
+    exploration_path: Option<String>,
+    sweep: Option<bool>,
+    exploration_depth: Option<u32>,
+    network: Option<bitcoin::Network>,
+    data_dir: String,
 }
 
 impl Zeroize for RetrieverSetting {
@@ -40,12 +44,49 @@ impl Zeroize for RetrieverSetting {
 impl ZeroizeOnDrop for RetrieverSetting {}
 
 impl RetrieverSetting {
+    pub fn new(
+        bitcoincore_rpc_url: Option<String>,
+        bitcoincore_rpc_port: Option<String>,
+        bitcoincore_rpc_cookie_path: String,
+        bitcoincore_rpc_timeout_seconds: Option<u64>,
+        mnemonic: Option<String>,
+        passphrase: Option<String>,
+        base_derivation_paths: Option<Vec<String>>,
+        exploration_path: Option<String>,
+        sweep: Option<bool>,
+        exploration_depth: Option<u32>,
+        network: Option<bitcoin::Network>,
+        data_dir: String,
+    ) -> Self {
+        RetrieverSetting {
+            bitcoincore_rpc_url,
+            bitcoincore_rpc_port,
+            bitcoincore_rpc_cookie_path,
+            bitcoincore_rpc_timeout_seconds,
+            mnemonic,
+            passphrase,
+            base_derivation_paths,
+            exploration_path,
+            sweep,
+            exploration_depth,
+            network,
+            data_dir,
+        }
+    }
+
+    pub fn from_config_file(config_file_path: &str) -> Result<Self, RetrieverError> {
+        Ok(Config::builder()
+            .add_source(config::File::with_name(&config_file_path))
+            .build()?
+            .try_deserialize::<RetrieverSetting>()?)
+    }
+
     pub fn get_client_setting(&self) -> ClientSetting {
         ClientSetting {
-            rpc_url: self.bitcoincore_rpc_url.clone().unwrap(),
-            rpc_port: self.bitcoincore_rpc_port.clone().unwrap(),
-            cookie_path: self.bitcoincore_rpc_cookie_path.clone(),
-            timeout_seconds: self.bitcoincore_rpc_timeout_seconds.unwrap(),
+            rpc_url: self.get_bitcoincore_rpc_url().clone().unwrap(),
+            rpc_port: self.get_bitcoincore_rpc_port().clone().unwrap(),
+            cookie_path: self.get_bitcoincore_rpc_cookie_path().clone(),
+            timeout_seconds: self.get_bitcoincore_rpc_timeout_seconds().unwrap(),
         }
     }
 

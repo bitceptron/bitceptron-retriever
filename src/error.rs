@@ -16,6 +16,7 @@ pub enum RetrieverError {
     UnspentScriptPublicKeySetIsNotPopulated,
     NoSearchHasBeenPerformed,
     DetailsHaveNotBeenFetched,
+    ConfigError(config::ConfigError),
 }
 
 impl From<bitcoincore_rpc::Error> for RetrieverError {
@@ -63,5 +64,11 @@ impl From<miniscript::Error> for RetrieverError {
 impl From<bitcoin::secp256k1::Error> for RetrieverError {
     fn from(value: bitcoin::secp256k1::Error) -> Self {
         RetrieverError::Secp256k1Error(value)
+    }
+}
+
+impl From<config::ConfigError> for RetrieverError {
+    fn from(value: config::ConfigError) -> Self {
+        RetrieverError::ConfigError(value)
     }
 }

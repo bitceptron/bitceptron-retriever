@@ -131,24 +131,23 @@ fn test_with_regtest() {
     // Mine to mine the transaction.
     let _ = client.generate_to_address(50, &mining_address);
     // Now retrieve.
-    let setting = RetrieverSetting {
-        bitcoincore_rpc_url: Some("127.0.0.1".to_string()),
-        bitcoincore_rpc_port: Some(REGTEST_PORTS[1].to_string()),
-        bitcoincore_rpc_cookie_path: format!("{}/regtest/.cookie", TEMP_DIR_PATH),
-        bitcoincore_rpc_timeout_seconds: Some(10000),
-        mnemonic: Some(mnemonic_str.to_string()),
-        passphrase: Some("".to_string()),
-        base_derivation_paths: Some(vec!["m/0".to_string()]),
-        exploration_path: Some("*a/*a/*a".to_string()),
-        sweep: Some(false),
-        exploration_depth: Some(10),
-        network: Some(bitcoin::Network::Regtest),
-        //data_dir: "/Users/bedlam/Desktop/getting_rusty/bitceptron-retriever/tests/temp".to_string(),
-        data_dir: fs::canonicalize(PathBuf::from_str(TEMP_DIR_PATH).unwrap())
+    let setting = RetrieverSetting::new(
+        Some("127.0.0.1".to_string()),
+        Some(REGTEST_PORTS[1].to_string()),
+        format!("{}/regtest/.cookie", TEMP_DIR_PATH),
+        Some(10000),
+        Some(mnemonic_str.to_string()),
+        Some("".to_string()),
+        Some(vec!["m/0".to_string()]),
+        Some("*a/*a/*a".to_string()),
+        Some(false),
+        Some(10),
+        Some(bitcoin::Network::Regtest),
+        fs::canonicalize(PathBuf::from_str(TEMP_DIR_PATH).unwrap())
             .unwrap()
             .to_string_lossy()
             .to_string(),
-    };
+    );
     let mut ret = Retriever::new(setting).unwrap();
     let _ = ret
         .check_for_dump_in_data_dir_or_create_dump_file()
@@ -158,7 +157,11 @@ fn test_with_regtest() {
     let _ = ret.get_details_of_finds_from_bitcoincore();
     let _ = ret.print_detailed_finds_on_console();
     assert_eq!(
-        ret.detailed_finds.unwrap()[0].1.total_amount.to_sat(),
+        ret.get_detailed_finds()
+            .unwrap()
+            .iter()
+            .fold(0u64, |acc, trio| acc
+                + trio.get_scan_result().total_amount.to_sat()),
         4200000000
     )
 }
