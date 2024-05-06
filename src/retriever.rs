@@ -20,7 +20,7 @@ pub struct Retriever {
     data_dir: String,
     dump_result: Option<DumpTxoutSetResult>,
     finds: Option<Vec<PathDescriptorPair>>,
-    detailed_finds: Option<Vec<PathScanResultDescriptorTrio>>,
+    pub detailed_finds: Option<Vec<PathScanResultDescriptorTrio>>,
 }
 
 impl Retriever {
@@ -66,7 +66,7 @@ impl Retriever {
         Ok(())
     }
 
-    pub fn search_the_uspk_set(&self) -> Result<Vec<PathDescriptorPair>, RetrieverError> {
+    pub fn search_the_uspk_set(&mut self) -> Result<(), RetrieverError> {
         if self.uspk_set.is_none() {
             return Err(RetrieverError::UnspentScriptPublicKeySetIsNotPopulated);
         }
@@ -80,7 +80,8 @@ impl Retriever {
                 &mut path_descriptor_pairs_vec,
             );
 
-        Ok(finds)
+        self.finds = Some(finds);
+        Ok(())
     }
 
     pub fn get_details_of_finds_from_bitcoincore(&mut self) -> Result<(), RetrieverError> {
