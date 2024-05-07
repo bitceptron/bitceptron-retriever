@@ -20,7 +20,7 @@ use miniscript::Descriptor;
 
 const BITCOIND_PATH: &str = "tests/bitcoind";
 const BITCOIN_CONF_PATH: &str = "tests/bitcoin.conf";
-const REGTEST_PORTS: [&str; 2] = ["18444", "18445"];
+const REGTEST_PORTS: [&str; 2] = ["18998", "18999"];
 const TEMP_DIR_PATH: &str = "tests/temp";
 
 fn main() {
