@@ -27,12 +27,12 @@ pub struct BitcoincoreRpcClient {
 impl BitcoincoreRpcClient {
     pub fn new(setting: ClientSetting) -> Result<Self, RetrieverError> {
         let (user, pass) =
-            Auth::CookieFile(PathBuf::from_str(&setting.cookie_path).unwrap()).get_user_pass()?;
+            Auth::CookieFile(PathBuf::from_str(&setting.get_cookie_path()).unwrap()).get_user_pass()?;
 
         let jsonrpc_build = bitcoincore_rpc::jsonrpc::simple_http::Builder::new()
-            .timeout(Duration::from_secs(setting.timeout_seconds))
+            .timeout(Duration::from_secs(*setting.get_timeout_seconds()))
             .auth(user.unwrap(), pass)
-            .url(format!("{}:{}", setting.rpc_url, setting.rpc_port).as_str())?
+            .url(format!("{}:{}", setting.get_rpc_url(), setting.get_rpc_port()).as_str())?
             .build();
         let jsonrpc_client = bitcoincore_rpc::jsonrpc::Client::from(jsonrpc_build);
         let client = bitcoincore_rpc::Client::from_jsonrpc(jsonrpc_client);

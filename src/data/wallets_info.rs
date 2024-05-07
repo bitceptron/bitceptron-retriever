@@ -398,7 +398,7 @@ impl WalletsInfo {
         }
     }
 
-    pub fn get_all_unique_preset_wallet_base_paths() -> Vec<DerivationPath> {
+    pub fn get_all_unique_preset_wallet_base_paths() -> Vec<String> {
         let mut wallet_base_paths_set = HashSet::new();
         wallet_base_paths_set.extend(
             WalletsInfo::iter()
@@ -407,8 +407,8 @@ impl WalletsInfo {
         );
         wallet_base_paths_set
             .iter()
-            .map(|item| item.to_owned())
-            .collect::<Vec<bitcoin::bip32::DerivationPath>>()
+            .map(|item| item.to_string())
+            .collect::<Vec<String>>()
     }
 
     pub fn get_all_unique_preset_wallet_base_paths_string_vec() -> Vec<String> {

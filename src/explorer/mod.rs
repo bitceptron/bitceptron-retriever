@@ -53,28 +53,28 @@ impl Explorer {
     #[allow(unused_assignments)]
     pub fn new(setting: ExplorerSetting) -> Result<Self, RetrieverError> {
         let exploration_path =
-            ExplorationPath::new(&setting.exploration_path, setting.exploration_depth)?;
+            ExplorationPath::new(&setting.get_exploration_path(), *setting.get_exploration_depth())?;
         let num_scans = NUMBER_OF_DESCRIPTOR_CLASSES
-            * setting.base_derivation_paths.len() as u64
-            * if setting.sweep {
+            * setting.get_base_derivation_paths().len() as u64
+            * if *setting.get_sweep() {
                 exploration_path.num_of_paths_sweep_from_root()
             } else {
                 exploration_path.num_of_paths()
             };
-        let mut mnemonic = from_input_str_to_mnemonic(&setting.mnemonic)?;
-        let mut seed = from_mnemonic_to_seed(mnemonic.clone(), &setting.passphrase);
+        let mut mnemonic = from_input_str_to_mnemonic(&setting.get_mnemonic())?;
+        let mut seed = from_mnemonic_to_seed(mnemonic.clone(), &setting.get_passphrase());
         mnemonic.zeroize();
-        let mut master_xpriv = from_seed_to_master_xpriv(seed.clone(), setting.network)?;
+        let mut master_xpriv = from_seed_to_master_xpriv(seed.clone(), *setting.get_network())?;
         seed.zeroize();
         let base_derivation_paths = {
             let mut paths = vec![];
-            for path_string in setting.base_derivation_paths.clone() {
+            for path_string in setting.get_base_derivation_paths().clone() {
                 paths.push(DerivationPath::from_str(&path_string)?)
             }
             paths
         };
         let mut complete_paths = vec![];
-        let exploration_paths = if setting.sweep {
+        let exploration_paths = if *setting.get_sweep() {
             exploration_path.generate_derivation_paths_for_exploration_path_sweep()?
         } else {
             exploration_path.generate_derivation_paths_for_exploration_path()?

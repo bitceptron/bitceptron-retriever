@@ -1,25 +1,49 @@
+use getset::Getters;
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Getters)]
+#[get = "pub with_prefix"]
 pub struct ExplorerSetting {
-    pub(crate) mnemonic: String,
-    pub(crate) passphrase: String,
-    pub(crate) base_derivation_paths: Vec<String>,
-    pub(crate) exploration_path: String,
-    pub(crate) exploration_depth: u32,
-    pub(crate) network: bitcoin::Network,
-    pub(crate) sweep: bool,
+    mnemonic: String,
+    passphrase: String,
+    base_derivation_paths: Vec<String>,
+    exploration_path: String,
+    exploration_depth: u32,
+    network: bitcoin::Network,
+    sweep: bool,
+}
+
+impl ExplorerSetting {
+    pub fn new(
+        mnemonic: String,
+        passphrase: String,
+        base_derivation_paths: Vec<String>,
+        exploration_path: String,
+        exploration_depth: u32,
+        network: bitcoin::Network,
+        sweep: bool,
+    ) -> Self {
+        ExplorerSetting {
+            mnemonic,
+            passphrase,
+            base_derivation_paths,
+            exploration_path,
+            exploration_depth,
+            network,
+            sweep,
+        }
+    }
 }
 
 impl Zeroize for ExplorerSetting {
     fn zeroize(&mut self) {
-        self.mnemonic = String::new();
-        self.passphrase = String::new();
-        self.exploration_path = String::new();
-        self.exploration_depth = 0;
+        self.mnemonic.zeroize();
+        self.passphrase.zeroize();
+        self.exploration_path.zeroize();
+        self.exploration_depth.zeroize();
         self.network = bitcoin::Network::Regtest;
-        self.sweep = false;
+        self.sweep.zeroize();
     }
 }
 
