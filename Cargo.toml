@@ -1,6 +1,6 @@
 [package]
 name = "bitceptron-retriever"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "A utility crate to scan the utxo set for bitcoins locked in scripts built by custom derivation paths."
 documentation = "https://docs.rs/bitceptron-retriever/latest/bitceptron_retriever/"
