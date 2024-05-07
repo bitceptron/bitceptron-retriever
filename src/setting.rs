@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use config::Config;
 use getset::Getters;
 use serde::{Deserialize, Serialize};

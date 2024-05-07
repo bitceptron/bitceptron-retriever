@@ -163,5 +163,7 @@ fn test_with_regtest() {
             .fold(0u64, |acc, trio| acc
                 + trio.get_scan_result().total_amount.to_sat()),
         4200000000
-    )
+    );
+    client.stop().unwrap();
+    sleep(Duration::from_millis(100));
 }

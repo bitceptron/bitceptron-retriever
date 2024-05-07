@@ -1,4 +1,5 @@
-//!
+//! This a light-weight crate that searches the utxo set for unspent transactions locked in spending scripts 
+//! created by derived keys from a master xpriv. 
 //! 
 
 pub mod client;

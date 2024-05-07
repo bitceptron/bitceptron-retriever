@@ -29,11 +29,12 @@ impl Retriever {
         let explorer_setting = setting.get_explorer_setting();
         let client = BitcoincoreRpcClient::new(client_setting)?;
         let explorer = Explorer::new(explorer_setting)?;
+        let data_dir = fs::canonicalize(setting.get_data_dir())?.to_string_lossy().to_string();
         Ok(Retriever {
             client,
             explorer,
             uspk_set: None,
-            data_dir: setting.get_data_dir().to_owned(),
+            data_dir,
             dump_result: None,
             finds: None,
             detailed_finds: None,
