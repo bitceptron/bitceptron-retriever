@@ -31,8 +31,6 @@ fn test_with_regtest() {
             "-i",
             format!(":{}", REGTEST_PORTS.join(",")).as_str(),
             "-a",
-            "-c",
-            "bitcoind",
             "-t",
         ])
         .stdout(Stdio::piped())
