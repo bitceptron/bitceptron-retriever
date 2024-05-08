@@ -29,6 +29,7 @@ We plan to:
 5. Add more documentation.
 6. Increase test coverage.
 7. Improve error messages.
+8. Add tracing.
 
 ### Usage
 
