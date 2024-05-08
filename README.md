@@ -26,7 +26,13 @@ We plan to:
 2. Add async support for faster preparation.
 3. Add support for multisigs.
 4. Optimize the txoutset crate for retriever's specific use case of the dump file.
+5. Add more documentation.
+6. Increase test coverage.
 
 ### Usage
 
 `bitceptron-retriever-cli` provides a cli tool to use this crate. Please refer to <https://github.com/bitceptron/bitceptron-retriever/bitceptron-retriever-cli> for instructions.
+
+## Epilogue
+
+Happy rusting plebs.

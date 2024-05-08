@@ -16,9 +16,7 @@ Bitceptron retriever uses the txout dump of bitcoincore to scan the utxo set for
 
 ### WIP notice
 
-Please note that this is an work in progress at the moment. We plan to:
-
-1. Add support for multisigs.
+Please note that this is an work in progress at the moment.
 
 ### `config.toml`
 
