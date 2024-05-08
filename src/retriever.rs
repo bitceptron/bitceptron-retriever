@@ -29,7 +29,9 @@ impl Retriever {
         let explorer_setting = setting.get_explorer_setting();
         let client = BitcoincoreRpcClient::new(client_setting)?;
         let explorer = Explorer::new(explorer_setting)?;
-        let data_dir = fs::canonicalize(setting.get_data_dir())?.to_string_lossy().to_string();
+        let data_dir = fs::canonicalize(setting.get_data_dir())?
+            .to_string_lossy()
+            .to_string();
         Ok(Retriever {
             client,
             explorer,
@@ -88,16 +90,20 @@ impl Retriever {
     pub fn get_details_of_finds_from_bitcoincore(&mut self) -> Result<(), RetrieverError> {
         if self.finds.is_none() {
             return Err(RetrieverError::NoSearchHasBeenPerformed);
+        } else if self.finds.as_ref().unwrap().is_empty() {
+            println!("No bitcoins were found in the explored paths.");
+            return Ok(());
+        } else {
+            let path_scan_request_pairs = self
+                .finds
+                .as_ref()
+                .unwrap()
+                .iter()
+                .map(|item| item.to_path_scan_request_descriptor_trio())
+                .collect();
+            self.detailed_finds = Some(self.client.scan_utxo_set(path_scan_request_pairs)?);
+            Ok(())
         }
-        let path_scan_request_pairs = self
-            .finds
-            .as_ref()
-            .unwrap()
-            .iter()
-            .map(|item| item.to_path_scan_request_descriptor_trio())
-            .collect();
-        self.detailed_finds = Some(self.client.scan_utxo_set(path_scan_request_pairs)?);
-        Ok(())
     }
 
     pub fn print_detailed_finds_on_console(&self) -> Result<(), RetrieverError> {

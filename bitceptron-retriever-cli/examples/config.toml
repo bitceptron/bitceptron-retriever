@@ -1,0 +1,83 @@
+#  Settings translate into thos struct:
+#  pub struct BitceptronScannerSetting {
+#     bitcoincore_rpc_url: Option<String>,
+#     bitcoincore_rpc_port: Option<String>,
+#     bitcoincore_rpc_cookie_path: String,
+#     bitcoincore_rpc_timeout_seconds: Option<u64>,
+#     mnemonic: Option<String>,
+#     passphrase: Option<String>,
+#     base_derivation_paths: Option<Vec<String>>,
+#     exploration_path: Option<String>,
+#     sweep: Option<bool>,
+#     exploration_depth: Option<u32>,
+#     network: Option<bitcoin::Network>,
+# }
+
+### MUST BE SET HERE.
+bitcoincore_rpc_cookie_path = "/Users/bedlam/Library/Application Support/Bitcoin/regtest/.cookie"
+
+# This is the url for bitcoincore. If not set, bitcoincore_rpc_url defaults to "127.0.0.1".
+bitcoincore_rpc_url = "127.0.0.1"
+
+# This is the rpc port for bitcoincore. If not set, bitcoincore_rpc_port defaults to "8333".
+bitcoincore_rpc_port = "18333"
+
+# This sets the timeout for rpc client in seconds. If not set, bitcoincore_rpc_timeout_seconds defaults to "6800".
+bitcoincore_rpc_timeout_seconds = "6800"
+
+### MUST BE SET HERE.
+# This is the mnemonic you must have according to BIP39.
+# MAKE SURE YOU SECURELY DELETE THIS FILE!!!
+mnemonic = "grass tribe october slam curve pave glory false mule snake wood high"
+
+### MUST BE SET HERE.
+# This is the optional passphrase you might have set according to BIP39. If not set, leave it empty here.
+# MAKE SURE YOU SECURELY DELETE THIS FILE!!!
+passphrase = ""
+
+# This is a vector of base derivation paths. These are the fixed parts of the derivation path, after which the exploration
+# starts. These base paths should comply with these formatting rules:
+# 1- Must start with "m"
+# 2- Each child should be separated by a "/"
+# 3- Children may be normal or hardened. Normal children are just numbers and hardened childeren are numbers followed by 
+#    either of "h" or " ' " characters.
+# Some valid examples:
+# "m/84'/0/0"
+# "m/40/0h/0h"
+# "m/0/1/2'/4h/8"
+# If base_derivation_paths is not set, it will use the built-in list of all known base paths for bitcoin wallets which is based on
+# the data provided by https://walletsrecovery.org 
+base_derivation_paths = ["m"]
+
+# This is the exploration path in which the program searches. Exploration path consists of steps separated by a "/".
+# Step semantics are as follows:
+# 1- For any A, a member of u32: A means the specific child number A of the parent.
+# 2- For any A and B, members of u32 with A <= B: A..B means all children number A (inclusive) to number B (inclusive) of the parent.
+# 3- For and A, a member of u32: ..A means all the children from number 0 (inclusive) to number B (inclusive) of the parrents.
+# 4- * means all children from (inclusive) 0 to exploration_depth (inclusive).
+# 5- suffixes " ' " and " h " mean all hardened children. Not using these suffixes makes all children in that step normal.
+# 6- Suffix " a " means exploring both hardened and normal children at that step.
+# Some valid examples:
+# "..100'/50..75a/*/*"
+# "42a/83..120a/68h/*a/54h"
+# "*'/*h/*a"
+exploration_path = "..5'/6a/..5"
+
+# sweep is a boolean. If set to true, it will sweep the exploration path from the root to the last step.
+# For example, if the base path is "m/0h" and the exploration path is "*/*h/..100", by setting sweep to true, all
+# these paths get explored: "m/0h", "m/0h/*", "m/0h/*/*h" and "m/0h/*/*h/..100". If set to false, only the
+# specified path will be explored. As per the last example, the explored path would be "m/0h/*/*h/..100".
+# If not set, defaults to false.
+sweep = false
+
+# This is the exploration depth. When using the * in exploration path, all children from 0 to this number (all inclusive)
+# will be explored. If not set, defaults to 100.
+exploration_depth = "50"
+
+# Indicates the network and can be: "Bitcoin", "Testnet", "Regtest" or "Signet".
+# If not set, defaults to "Bitcoin".
+network = "Regtest"
+
+# This is the folder in which the retriever searchs for a dump file named "utxo-dump.dat" or creates one
+# via an rpc call tp bitcoincore if such file is not found in this path.
+data_dir = "target"

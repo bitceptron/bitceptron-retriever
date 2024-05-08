@@ -1,12 +1,16 @@
 [package]
 name = "bitceptron-retriever"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "A utility crate to scan the utxo set for bitcoins locked in scripts built by custom derivation paths."
 documentation = "https://docs.rs/bitceptron-retriever/latest/bitceptron_retriever/"
 repository = "https://github.com/bitceptron/bitceptron-retriever"
 license = "MIT"
 keywords = ["bitcoin","bitcoin-dev", "bitceptron", "utxo", "bip32"]
+
+[[bin]]
+name = "bitceptron-retriever-cli"
+path = "bitceptron-retriever-cli/main.rs"
 
 [dependencies]
 bitcoin = "0.31.2"
@@ -24,3 +28,4 @@ hex = "0.4.3"
 zeroize = { version = "1.7.0", features = ["zeroize_derive"] }
 regex = "1.10.4"
 config = "0.14.0"
+clap = { version = "4.5.4", features = ["cargo"] }

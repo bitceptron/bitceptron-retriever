@@ -16,10 +16,17 @@ Bitceptron retriever uses the txout dump of bitcoincore to scan the utxo set for
 
 ### WIP notice
 
-Please note that this is an work in progress at the moment and breaking changes might happen. We plan to:
+Please note that this is an work in progress at the moment and breaking changes might happen.
 
-1. Add support for multisigs.
+### Future steps
+
+We plan to:
+
+1. Build a GUI.
+2. Add async support for faster preparation.
+3. Add support for multisigs.
+4. Optimize the txoutset crate for retriever's specific use case of the dump file.
 
 ### Usage
 
-`bitceptron-retriever-cli` provides a cli tool to use this crate. Please refer to <https://github.com/bitceptron/bitceptron-retriever-cli> for instructions.
+`bitceptron-retriever-cli` provides a cli tool to use this crate. Please refer to <https://github.com/bitceptron/bitceptron-retriever/bitceptron-retriever-cli> for instructions.
