@@ -28,6 +28,7 @@ We plan to:
 4. Optimize the txoutset crate for retriever's specific use case of the dump file.
 5. Add more documentation.
 6. Increase test coverage.
+7. Improve error messages.
 
 ### Usage
 
