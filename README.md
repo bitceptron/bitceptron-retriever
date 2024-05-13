@@ -30,6 +30,7 @@ We plan to:
 6. Increase test coverage.
 7. Improve error messages.
 8. Add tracing.
+9. Add CI/CD.
 
 ### Usage
 
