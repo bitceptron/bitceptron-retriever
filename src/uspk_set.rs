@@ -59,11 +59,6 @@ impl UnspentScriptPupKeysSet {
         Ok(UnspentScriptPupKeysSet { set })
     }
 
-    // pub fn from_dump_result(dump_result: DumpTxoutSetResult) -> Result<Self, RetrieverError> {
-    //     let dump_file_path = dump_result.get_path();
-    //     Self::from_dump_file(dump_file_path)
-    // }
-
     pub fn search_for_path_descriptor_pairs_and_return_those_present(
         &self,
         path_descriptor_pairs_vec: &Vec<PathDescriptorPair>,
