@@ -52,9 +52,8 @@ async fn test_with_regtest() {
                 .wait();
         }
     };
-    // Clear possible past data in temp.
-    let _ = fs::remove_dir_all(TEMP_DIR_PATH);
-    let _ = fs::create_dir_all(TEMP_DIR_PATH).unwrap();
+    // Create temp dir.
+    let _ = fs::create_dir_all(TEMP_DIR_PATH);
 
     // Copy bitcoin.conf to temp.
     let _ = fs::copy(BITCOIN_CONF_PATH, format!("{}/bitcoin.conf", TEMP_DIR_PATH)).unwrap();
