@@ -10,3 +10,4 @@ pub mod error;
 pub mod data;
 pub mod path_pairs;
 pub mod explorer;
+pub mod covered_descriptors;

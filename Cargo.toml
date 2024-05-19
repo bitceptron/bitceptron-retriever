@@ -1,6 +1,6 @@
 [package]
 name = "bitceptron-retriever"
-version = "0.1.2"
+version = "1.0.0"
 edition = "2021"
 description = "A utility crate to scan the utxo set for bitcoins locked in scripts built by custom derivation paths."
 documentation = "https://docs.rs/bitceptron-retriever/latest/bitceptron_retriever/"
@@ -22,10 +22,22 @@ strum = { version = "0.26.2", features = ["derive"] }
 num-format = "0.4.4"
 hashbrown = "0.14.5"
 txoutset = "0.3.0"
-indicatif = "0.17.8"
 bip39 = { version = "2.0.0", features = ["zeroize"] }
 hex = "0.4.3"
 zeroize = { version = "1.7.0", features = ["zeroize_derive"] }
 regex = "1.10.4"
 config = "0.14.0"
 clap = { version = "4.5.4", features = ["cargo"] }
+tokio = { version = "1.37.0", features = ["full"] }
+rayon = "1.10.0"
+bytes = "1.6.0"
+itertools = "0.12.1"
+futures = "0.3.30"
+tokio-stream = "0.1.15"
+tracing = "0.1.40"
+tracing-log = "0.2.0"
+tracing-subscriber = "0.3.18"
+
+
+[dev-dependencies]
+iai-callgrind = "0.11.0"

@@ -4,9 +4,7 @@ use bitcoin::{
     key::Secp256k1,
 };
 
-use crate::{data::defaults::NUMBER_OF_DESCRIPTOR_CLASSES, error::RetrieverError};
-
-use super::exploration_path::ExplorationPath;
+use crate::error::RetrieverError;
 
 pub fn from_seed_to_master_xpriv(
     seed: [u8; 64],
@@ -26,31 +24,12 @@ pub fn from_master_xpriv_to_base_xpriv(
 }
 
 pub fn from_input_str_to_mnemonic(input: &str) -> Result<bip39::Mnemonic, RetrieverError> {
-    // TODO: Language can be parametrized.
     let mnemonic = bip39::Mnemonic::parse_in_normalized(bip39::Language::English, input)?;
     Ok(mnemonic)
 }
 
 pub fn from_mnemonic_to_seed(mnemonic: Mnemonic, passphrase: &str) -> [u8; 64] {
     mnemonic.to_seed(passphrase)
-}
-
-pub fn total_number_of_scans(
-    exploration_path: &str,
-    exploration_depth: u32,
-    sweep: bool,
-    base_derivation_paths: Vec<String>,
-) -> u64 {
-    let exploration_path = ExplorationPath::new(&exploration_path, exploration_depth).unwrap();
-    if sweep {
-        base_derivation_paths.len() as u64
-            * NUMBER_OF_DESCRIPTOR_CLASSES
-            * exploration_path.num_of_paths_sweep_from_root()
-    } else {
-        base_derivation_paths.len() as u64
-            * NUMBER_OF_DESCRIPTOR_CLASSES
-            * exploration_path.num_of_paths()
-    }
 }
 
 #[cfg(test)]

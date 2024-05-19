@@ -8,6 +8,7 @@ use miniscript::{
     bitcoin::{bip32::Xpub, secp256k1::PublicKey},
     Descriptor,
 };
+use tracing::info;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -161,6 +162,7 @@ impl PathScanResultDescriptorTrio {
 
 impl Zeroize for PathScanResultDescriptorTrio {
     fn zeroize(&mut self) {
+        info!("Zeroizing path-scan result pairs initialized.");
         let paths = vec!["0".to_string(); self.0.len()].join::<&str>("/");
         self.0 = DerivationPath::from_str(format!("m/{}", paths).as_str()).unwrap();
         self.1 = ScanTxOutResult {
@@ -189,6 +191,7 @@ impl Zeroize for PathScanResultDescriptorTrio {
             }],
             total_amount: Amount::from_sat(2100000000000000),
         };
+        info!("Zeroizing path-scan result pairs finished.");
     }
 }
 

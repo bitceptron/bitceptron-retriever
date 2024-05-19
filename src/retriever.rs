@@ -1,10 +1,22 @@
-use std::{fs, path::PathBuf, str::FromStr, sync::Arc};
+use std::{
+    fs,
+    path::PathBuf,
+    str::FromStr,
+    sync::{Arc, Mutex},
+};
 
+use bitcoin::{bip32::DerivationPath, key::Secp256k1};
+use itertools::Itertools;
+use miniscript::Descriptor;
 use num_format::{Locale, ToFormattedString};
+use tokio::sync::mpsc;
+use tracing::{error, info, warn};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::{
     client::{dump_utxout_set_result::DumpTxoutSetResult, BitcoincoreRpcClient},
+    covered_descriptors::CoveredDescriptors,
+    data::defaults::DEFAULT_SELECTED_DESCRIPTORS,
     error::RetrieverError,
     explorer::Explorer,
     path_pairs::{PathDescriptorPair, PathScanResultDescriptorTrio},
@@ -15,31 +27,41 @@ use crate::{
 #[derive(Debug)]
 pub struct Retriever {
     client: BitcoincoreRpcClient,
-    explorer: Explorer,
-    uspk_set: Option<Arc<UnspentScriptPupKeysSet>>,
+    explorer: Arc<Explorer>,
+    uspk_set: UnspentScriptPupKeysSet,
     data_dir: String,
     dump_result: Option<DumpTxoutSetResult>,
-    finds: Option<Vec<PathDescriptorPair>>,
+    finds: Arc<Mutex<Vec<PathDescriptorPair>>>,
     detailed_finds: Option<Vec<PathScanResultDescriptorTrio>>,
+    select_descriptors: hashbrown::HashSet<CoveredDescriptors>,
 }
 
 impl Retriever {
-    pub fn new(setting: RetrieverSetting) -> Result<Self, RetrieverError> {
+    pub async fn new(setting: RetrieverSetting) -> Result<Self, RetrieverError> {
+        info!("Creation of retriever started.");
         let client_setting = setting.get_client_setting();
         let explorer_setting = setting.get_explorer_setting();
         let client = BitcoincoreRpcClient::new(client_setting)?;
-        let explorer = Explorer::new(explorer_setting)?;
+        let explorer = Arc::new(Explorer::new(explorer_setting)?);
+        let uspk_set = UnspentScriptPupKeysSet::new();
         let data_dir = fs::canonicalize(setting.get_data_dir())?
             .to_string_lossy()
             .to_string();
+        let finds = Arc::new(Mutex::new(vec![]));
+        let select_descriptors = match setting.get_selected_descriptors() {
+            Some(select_descriptors) => hashbrown::HashSet::from_iter(select_descriptors.clone()),
+            None => hashbrown::HashSet::from_iter(DEFAULT_SELECTED_DESCRIPTORS.to_vec()),
+        };
+        info!("Creation of retriever finished successfully.");
         Ok(Retriever {
             client,
             explorer,
-            uspk_set: None,
+            uspk_set,
             data_dir,
             dump_result: None,
-            finds: None,
+            finds,
             detailed_finds: None,
+            select_descriptors,
         })
     }
 
@@ -47,10 +69,16 @@ impl Retriever {
         let data_dir_path = PathBuf::from_str(&self.data_dir).unwrap();
         let mut dump_file_path = data_dir_path.clone();
         dump_file_path.extend(["utxo_dump.dat"]);
+        info!("Searching for the dump file in datadir.");
         if dump_file_path.exists() {
+            info!("Dump file found in datadir.");
             Ok(())
         } else {
-            fs::create_dir_all(data_dir_path)?;
+            info!("Dump file was not found in datadir.");
+            if !data_dir_path.exists() {
+                info!("Creating the full datadir path.");
+                fs::create_dir_all(data_dir_path)?;
+            }
             let dump_result = self.client.dump_utxo_set(&self.data_dir)?;
             self.dump_result = Some(dump_result);
             Ok(())
@@ -58,45 +86,165 @@ impl Retriever {
     }
 
     pub fn populate_uspk_set(&mut self) -> Result<(), RetrieverError> {
+        info!("Searching for the dump file to populate the Unspent ScriptPubKey set.");
         let dump_file_path_str = format!("{}/utxo_dump.dat", self.data_dir);
         let dump_file_path = PathBuf::from_str(&dump_file_path_str).unwrap();
         if !dump_file_path.exists() {
+            error!("Dump file (utxo_dump.dat) does not exist in data dir.");
             return Err(RetrieverError::NoDumpFileInDataDir);
         }
-        self.uspk_set = Some(Arc::new(UnspentScriptPupKeysSet::from_dump_file(
-            &dump_file_path_str,
-        )?));
+        info!("Dump file found.");
+        self.uspk_set.populate_with_dump_file(&dump_file_path_str)?;
         Ok(())
     }
 
-    pub fn search_the_uspk_set(&mut self) -> Result<(), RetrieverError> {
-        if self.uspk_set.is_none() {
-            return Err(RetrieverError::UnspentScriptPublicKeySetIsNotPopulated);
-        }
-        let mut path_descriptor_pairs_vec =
-            self.explorer.get_all_single_key_script_descriptors()?;
-        let finds = self
-            .uspk_set
-            .as_ref()
-            .unwrap()
-            .search_for_path_descriptor_pairs_and_return_those_present(
-                &mut path_descriptor_pairs_vec,
+    pub async fn create_derivation_path_stream(
+        &self,
+        sender: mpsc::Sender<DerivationPath>,
+    ) -> Result<(), RetrieverError> {
+        let explorer = self.explorer.clone();
+        let bases = explorer.get_exploration_path().get_base_paths().to_owned();
+        let num_explore_paths = self.explorer.get_exploration_path().size();
+        let total_paths = num_explore_paths * bases.len();
+        let mut sent_paths = 0;
+        tokio::spawn(async move {
+            info!(
+                "Creation of an iterator for total {} paths started.",
+                total_paths.to_formatted_string(&Locale::en)
             );
+            let explore_paths_iter = explorer
+                .get_exploration_path()
+                .clone()
+                .get_explore()
+                .to_owned()
+                .iter()
+                .map(|step| step.to_owned())
+                .multi_cartesian_product();
+            for explore_path in explore_paths_iter {
+                for base in bases.iter() {
+                    sender
+                        .send(
+                            base.extend(
+                                DerivationPath::from_str(&format!("m/{}", explore_path.join("/")))
+                                    .unwrap(),
+                            ),
+                        )
+                        .await
+                        .unwrap();
+                    sent_paths += 1;
+                    if sent_paths % 1000 == 0 {
+                        info!(
+                            "Total paths sent to processing: {} of {}",
+                            sent_paths.to_formatted_string(&Locale::en),
+                            total_paths.to_formatted_string(&Locale::en)
+                        )
+                    }
+                }
+            }
+        });
+        Ok(())
+    }
 
-        self.finds = Some(finds);
+    pub async fn process_derivation_path_stream(
+        &mut self,
+        receiver: &mut mpsc::Receiver<DerivationPath>,
+    ) -> Result<(), RetrieverError> {
+        let secp = Secp256k1::new();
+        let select_descriptors = self.select_descriptors.clone();
+        let uspk_set = self.uspk_set.get_inner_set();
+        let mut found = vec![];
+        let mut paths_received = 0;
+        while let Some(path) = receiver.recv().await {
+            paths_received += 1;
+            if paths_received % 1000 == 0 {
+                info!(
+                    "Total paths received to process: {}",
+                    paths_received.to_formatted_string(&Locale::en)
+                );
+            }
+            let pubkey = self
+                .explorer
+                .get_master_xpriv()
+                .derive_priv(&secp, &path)
+                .unwrap()
+                .to_keypair(&secp)
+                .public_key();
+            if select_descriptors.contains(&CoveredDescriptors::P2pk) {
+                let desc = Descriptor::new_pk(pubkey);
+                let desc_pubkey = desc.script_pubkey();
+                let target = desc_pubkey.as_bytes();
+                if uspk_set.contains(target) {
+                    warn!("Found a non-empty ScriptPubKey.");
+                    found.push(PathDescriptorPair::new(path.to_owned(), desc));
+                }
+            }
+            if select_descriptors.contains(&CoveredDescriptors::P2pkh) {
+                let desc = Descriptor::new_pkh(pubkey)
+                    .map_err(|err| RetrieverError::from(err))
+                    .unwrap();
+                let desc_pubkey = desc.script_pubkey();
+                let target = desc_pubkey.as_bytes();
+                if uspk_set.contains(target) {
+                    warn!("Found a non-empty ScriptPubKey.");
+                    found.push(PathDescriptorPair::new(path.to_owned(), desc));
+                }
+            }
+            if select_descriptors.contains(&CoveredDescriptors::P2wpkh) {
+                let desc = Descriptor::new_wpkh(pubkey)
+                    .map_err(|err| RetrieverError::from(err))
+                    .unwrap();
+                let desc_pubkey = desc.script_pubkey();
+                let target = desc_pubkey.as_bytes();
+                if uspk_set.contains(target) {
+                    warn!("Found a non-empty ScriptPubKey.");
+                    found.push(PathDescriptorPair::new(path.to_owned(), desc));
+                }
+            }
+            if select_descriptors.contains(&CoveredDescriptors::P2shwpkh) {
+                let desc = Descriptor::new_sh_wpkh(pubkey)
+                    .map_err(|err| RetrieverError::from(err))
+                    .unwrap();
+                let desc_pubkey = desc.script_pubkey();
+                let target = desc_pubkey.as_bytes();
+                if uspk_set.contains(target) {
+                    warn!("Found a non-empty ScriptPubKey.");
+                    found.push(PathDescriptorPair::new(path.to_owned(), desc));
+                }
+            }
+            if select_descriptors.contains(&CoveredDescriptors::P2tr) {
+                let desc = Descriptor::new_tr(pubkey, None)
+                    .map_err(|err| RetrieverError::from(err))
+                    .unwrap();
+                let desc_pubkey = desc.script_pubkey();
+                let target = desc_pubkey.as_bytes();
+                if uspk_set.contains(target) {
+                    warn!("Found a non-empty ScriptPubKey.");
+                    found.push(PathDescriptorPair::new(path.to_owned(), desc));
+                }
+            }
+        }
+        self.finds = Arc::new(Mutex::new(found));
+        Ok(())
+    }
+
+    pub async fn search_the_uspk_set(&mut self) -> Result<(), RetrieverError> {
+        let (tx, mut rx) = mpsc::channel(1024);
+        let _ = tokio::join!(self.create_derivation_path_stream(tx));
+        let _ = tokio::join!(self.process_derivation_path_stream(&mut rx));
         Ok(())
     }
 
     pub fn get_details_of_finds_from_bitcoincore(&mut self) -> Result<(), RetrieverError> {
-        if self.finds.is_none() {
-            return Err(RetrieverError::NoSearchHasBeenPerformed);
-        } else if self.finds.as_ref().unwrap().is_empty() {
+        // if self.finds.lock().unwrap().is_empty() {
+        //     return Err(RetrieverError::NoSearchHasBeenPerformed);
+        // } else
+        if self.finds.lock().unwrap().is_empty() {
             println!("No bitcoins were found in the explored paths.");
             return Ok(());
         } else {
             let path_scan_request_pairs = self
                 .finds
-                .as_ref()
+                .lock()
                 .unwrap()
                 .iter()
                 .map(|item| item.to_path_scan_request_descriptor_trio())
@@ -139,8 +287,7 @@ impl Retriever {
 impl Zeroize for Retriever {
     fn zeroize(&mut self) {
         self.client.zeroize();
-        self.explorer.zeroize();
-        self.finds.zeroize();
+        // self.explorer.as_ref().zeroize();
         self.data_dir.zeroize();
         self.dump_result.zeroize();
     }

@@ -17,6 +17,7 @@ pub enum RetrieverError {
     NoSearchHasBeenPerformed,
     DetailsHaveNotBeenFetched,
     ConfigError(config::ConfigError),
+    TokioJoinError(tokio::task::JoinError)
 }
 
 impl From<bitcoincore_rpc::Error> for RetrieverError {
@@ -70,5 +71,11 @@ impl From<bitcoin::secp256k1::Error> for RetrieverError {
 impl From<config::ConfigError> for RetrieverError {
     fn from(value: config::ConfigError) -> Self {
         RetrieverError::ConfigError(value)
+    }
+}
+
+impl From<tokio::task::JoinError> for RetrieverError {
+    fn from(value: tokio::task::JoinError) -> Self {
+        RetrieverError::TokioJoinError(value)
     }
 }

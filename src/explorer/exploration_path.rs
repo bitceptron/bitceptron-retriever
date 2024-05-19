@@ -1,173 +1,92 @@
 use std::str::FromStr;
 
-use bitcoin::bip32::{ChildNumber, DerivationPath};
+use bitcoin::bip32::DerivationPath;
+use getset::Getters;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use tracing::{error, info};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::error::RetrieverError;
 
-#[derive(Debug, Clone, PartialEq, Eq, ZeroizeOnDrop, Zeroize, Serialize, Deserialize, Hash)]
-pub enum ExplorationStepHardness {
-    Hardened,
-    Normal,
-    HardenedAndNormal,
-}
+use super::exploration_step::{ExplorationStep, ExplorationStepHardness};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Zeroize, ZeroizeOnDrop, Hash)]
-pub struct ExplorationStep {
-    start_inclusive: u32,
-    end_inclusive: u32,
-    hardness: ExplorationStepHardness,
-}
-
-impl ExplorationStep {
-    pub fn num_children(&self) -> u32 {
-        if self.hardness == ExplorationStepHardness::HardenedAndNormal {
-            2 * (self.end_inclusive - self.start_inclusive + 1)
-        } else {
-            self.end_inclusive - self.start_inclusive + 1
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Zeroize, ZeroizeOnDrop, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash, Getters)]
+#[get = "pub with_prefix"]
 pub struct ExplorationPath {
-    path: Vec<ExplorationStep>,
+    base_paths: Vec<DerivationPath>,
+    explore: Vec<ExplorationStep>,
     depth: u32,
+    sweep: bool,
 }
 
 impl ExplorationPath {
-    pub fn new(exploration_str: &str, exploration_depth: u32) -> Result<Self, RetrieverError> {
-        if check_input_chars(exploration_str) == false {
+    pub fn new(
+        base_paths: Option<Vec<String>>,
+        explore_str: &str,
+        exploration_depth: u32,
+        sweep: bool,
+    ) -> Result<Self, RetrieverError> {
+        info!("Creation of exploration path started.");
+        let base_paths = match base_paths {
+            Some(base_paths) => base_paths
+                .iter()
+                .map(|base_path_string| {
+                    DerivationPath::from_str(&base_path_string)
+                        .map_err(|err| {
+                            return Err::<ExplorationPath, RetrieverError>(
+                                RetrieverError::Bip32Error(err),
+                            );
+                        })
+                        .unwrap()
+                })
+                .collect::<Vec<DerivationPath>>(),
+            None => vec![DerivationPath::from_str("m").unwrap()],
+        };
+        if check_input_chars(explore_str) == false {
+            error!("Encountered invalid exploration path.");
             return Err(RetrieverError::InvalidExplorationPath);
         }
-        let exploration_path_split = split_path_steps(exploration_str);
-        if exploration_path_split
+        let explore_path_split = split_path_steps(explore_str);
+        if explore_path_split
             .iter()
             .any(|step| !check_step_sanity(step.clone()))
         {
+            error!("Encountered invalid exploration path.");
             return Err(RetrieverError::InvalidExplorationPath);
         }
 
-        let mut path = vec![];
-        for step in exploration_path_split {
-            path.push(translate_step_string_to_exploration_step(
+        let mut explore = vec![];
+        for step in explore_path_split {
+            explore.push(translate_step_string_to_exploration_step(
                 step,
                 exploration_depth,
             )?)
         }
-
+        info!("Creation of exploration path finished successfully.");
         Ok(ExplorationPath {
-            path,
+            base_paths,
+            explore,
             depth: exploration_depth,
+            sweep,
         })
     }
 
-    pub fn num_of_paths(&self) -> u64 {
-        if self.path.is_empty() {
+    pub fn num_of_paths(&self) -> usize {
+        info!("Calculating the number of paths in exploration path.");
+        if self.explore.is_empty() {
             0
         } else {
-            self.path
-                .iter()
-                .fold(1, |acc, step| acc * step.num_children() as u64)
+            self.base_paths.len()
+                * self
+                    .explore
+                    .iter()
+                    .fold(1usize, |acc, step| acc * step.num_children() as usize)
         }
     }
 
-    pub fn generate_derivation_paths_for_exploration_path(
-        &self,
-    ) -> Result<Vec<DerivationPath>, RetrieverError> {
-        let mut derivation_paths = vec![];
-        for step in self.path.clone() {
-            if derivation_paths.is_empty() {
-                match step.hardness {
-                    ExplorationStepHardness::Hardened => {
-                        for child_number in step.start_inclusive..step.end_inclusive + 1 {
-                            derivation_paths.push(DerivationPath::from_str(
-                                format!("m/{}'", child_number).as_str(),
-                            )?)
-                        }
-                    }
-                    ExplorationStepHardness::Normal => {
-                        for child_number in step.start_inclusive..step.end_inclusive + 1 {
-                            derivation_paths.push(DerivationPath::from_str(
-                                format!("m/{}", child_number).as_str(),
-                            )?)
-                        }
-                    }
-                    ExplorationStepHardness::HardenedAndNormal => {
-                        for child_number in step.start_inclusive..step.end_inclusive + 1 {
-                            derivation_paths.push(DerivationPath::from_str(
-                                format!("m/{}'", child_number).as_str(),
-                            )?)
-                        }
-                        for child_number in step.start_inclusive..step.end_inclusive + 1 {
-                            derivation_paths.push(DerivationPath::from_str(
-                                format!("m/{}", child_number).as_str(),
-                            )?)
-                        }
-                    }
-                }
-            } else {
-                match step.hardness {
-                    ExplorationStepHardness::Hardened => {
-                        let mut round_result = vec![];
-                        for child_number in step.start_inclusive..step.end_inclusive + 1 {
-                            for child in derivation_paths.clone() {
-                                round_result.push(
-                                    child.extend(ChildNumber::from_hardened_idx(child_number)?),
-                                );
-                            }
-                        }
-                        derivation_paths = round_result;
-                    }
-                    ExplorationStepHardness::Normal => {
-                        let mut round_result = vec![];
-                        for child_number in step.start_inclusive..step.end_inclusive + 1 {
-                            for child in derivation_paths.clone() {
-                                round_result.push(
-                                    child.extend(ChildNumber::from_normal_idx(child_number)?),
-                                );
-                            }
-                        }
-                        derivation_paths = round_result;
-                    }
-                    ExplorationStepHardness::HardenedAndNormal => {
-                        let mut round_result = vec![];
-                        for child_number in step.start_inclusive..step.end_inclusive + 1 {
-                            for child in derivation_paths.clone() {
-                                round_result.push(
-                                    child.extend(ChildNumber::from_hardened_idx(child_number)?),
-                                );
-                            }
-                        }
-                        for child_number in step.start_inclusive..step.end_inclusive + 1 {
-                            for child in derivation_paths.clone() {
-                                round_result.push(
-                                    child.extend(ChildNumber::from_normal_idx(child_number)?),
-                                );
-                            }
-                        }
-                        derivation_paths = round_result;
-                    }
-                }
-            }
-        }
-        Ok(derivation_paths)
-    }
-
-    pub fn generate_sweep_exploration_paths(&self) -> Vec<ExplorationPath> {
-        let mut sweep_paths = vec![];
-        for i in 0..self.path.len() + 1 {
-            sweep_paths.push(ExplorationPath {
-                path: self.path[..i].to_vec(),
-                depth: self.depth,
-            });
-        }
-        sweep_paths
-    }
-
-    pub fn num_of_paths_sweep_from_root(&self) -> u64 {
+    pub fn num_of_paths_sweep(&self) -> usize {
+        info!("Calculating the number of sweep paths in exploration path.");
         let mut num_paths = 1;
         let sweep_exploration_paths = self.generate_sweep_exploration_paths();
         for path in sweep_exploration_paths {
@@ -176,18 +95,40 @@ impl ExplorationPath {
         num_paths
     }
 
-    pub fn generate_derivation_paths_for_exploration_path_sweep(
-        &self,
-    ) -> Result<Vec<DerivationPath>, RetrieverError> {
-        let mut derivation_paths = vec![];
-        derivation_paths.extend(vec![DerivationPath::from_str("m")?]);
-        let sweep_paths = self.generate_sweep_exploration_paths();
-        for path in sweep_paths {
-            derivation_paths.extend(path.generate_derivation_paths_for_exploration_path()?)
+    pub fn size(&self) -> usize {
+        if self.sweep {
+            self.num_of_paths_sweep()
+        } else {
+            self.num_of_paths()
         }
-        Ok(derivation_paths)
+    }
+
+    pub fn generate_sweep_exploration_paths(&self) -> Vec<ExplorationPath> {
+        info!("Creating sweep exploration paths.");
+        let mut sweep_paths = vec![];
+        for i in 0..self.explore.len() + 1 {
+            sweep_paths.push(ExplorationPath {
+                explore: self.explore[..i].to_vec(),
+                depth: self.depth,
+                base_paths: self.base_paths.clone(),
+                sweep: self.sweep,
+            });
+        }
+        sweep_paths
     }
 }
+
+impl Zeroize for ExplorationPath {
+    fn zeroize(&mut self) {
+        self.base_paths =
+            vec![DerivationPath::from_str("m/1024/1024/1204/1024").unwrap(); self.base_paths.len()];
+        self.explore.zeroize();
+        self.depth.zeroize();
+        self.sweep.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for ExplorationPath {}
 
 pub fn check_input_chars(input: &str) -> bool {
     let regex = Regex::new(r"^[\d./'ha*]+$").unwrap();
@@ -232,11 +173,7 @@ pub fn translate_wildcard_step_string_to_exploration_step(
     let hardness = extract_step_hardness(&step_string);
     let start_inclusive = 0;
     let end_inclusive = exploration_depth;
-    ExplorationStep {
-        start_inclusive,
-        end_inclusive,
-        hardness,
-    }
+    ExplorationStep::new(start_inclusive, end_inclusive, hardness)
 }
 
 pub fn translate_range_step_string_to_exploration_step(
@@ -300,11 +237,11 @@ pub fn translate_range_step_string_to_exploration_step(
         return Err(RetrieverError::InvalidStepRange);
     }
 
-    Ok(ExplorationStep {
+    Ok(ExplorationStep::new(
         start_inclusive,
         end_inclusive,
         hardness,
-    })
+    ))
 }
 
 pub fn translate_step_string_to_exploration_step(
@@ -327,7 +264,6 @@ pub fn translate_step_string_to_exploration_step(
 
 #[cfg(test)]
 mod tests {
-    use hashbrown::HashSet;
 
     use super::*;
 
@@ -418,71 +354,39 @@ mod tests {
     #[test]
     fn translate_wildcard_step_string_to_exploration_step_works_01() {
         let result = translate_wildcard_step_string_to_exploration_step("*h".to_string(), 10);
-        let expected = ExplorationStep {
-            start_inclusive: 0,
-            end_inclusive: 10,
-            hardness: ExplorationStepHardness::Hardened,
-        };
+        let expected = ExplorationStep::new(0, 10, ExplorationStepHardness::Hardened);
         assert_eq!(result, expected);
 
         let result = translate_wildcard_step_string_to_exploration_step("*'".to_string(), 10);
-        let expected = ExplorationStep {
-            start_inclusive: 0,
-            end_inclusive: 10,
-            hardness: ExplorationStepHardness::Hardened,
-        };
+        let expected = ExplorationStep::new(0, 10, ExplorationStepHardness::Hardened);
         assert_eq!(result, expected);
 
         let result = translate_wildcard_step_string_to_exploration_step("*a".to_string(), 10);
-        let expected = ExplorationStep {
-            start_inclusive: 0,
-            end_inclusive: 10,
-            hardness: ExplorationStepHardness::HardenedAndNormal,
-        };
+        let expected = ExplorationStep::new(0, 10, ExplorationStepHardness::HardenedAndNormal);
         assert_eq!(result, expected);
 
         let result = translate_wildcard_step_string_to_exploration_step("*".to_string(), 10);
-        let expected = ExplorationStep {
-            start_inclusive: 0,
-            end_inclusive: 10,
-            hardness: ExplorationStepHardness::Normal,
-        };
+        let expected = ExplorationStep::new(0, 10, ExplorationStepHardness::Normal);
         assert_eq!(result, expected);
     }
 
     #[test]
     fn translate_range_step_string_to_exploration_step_works_01() {
         let result = translate_range_step_string_to_exploration_step("0".to_string()).unwrap();
-        let expected = ExplorationStep {
-            start_inclusive: 0,
-            end_inclusive: 0,
-            hardness: ExplorationStepHardness::Normal,
-        };
+        let expected = ExplorationStep::new(0, 0, ExplorationStepHardness::Normal);
         assert_eq!(result, expected);
 
         let result = translate_range_step_string_to_exploration_step("9..78h".to_string()).unwrap();
-        let expected = ExplorationStep {
-            start_inclusive: 9,
-            end_inclusive: 78,
-            hardness: ExplorationStepHardness::Hardened,
-        };
+        let expected = ExplorationStep::new(9, 78, ExplorationStepHardness::Hardened);
         assert_eq!(result, expected);
 
         let result =
             translate_range_step_string_to_exploration_step("100..120a".to_string()).unwrap();
-        let expected = ExplorationStep {
-            start_inclusive: 100,
-            end_inclusive: 120,
-            hardness: ExplorationStepHardness::HardenedAndNormal,
-        };
+        let expected = ExplorationStep::new(100, 120, ExplorationStepHardness::HardenedAndNormal);
         assert_eq!(result, expected);
 
         let result = translate_range_step_string_to_exploration_step("..10".to_string()).unwrap();
-        let expected = ExplorationStep {
-            start_inclusive: 0,
-            end_inclusive: 10,
-            hardness: ExplorationStepHardness::Normal,
-        };
+        let expected = ExplorationStep::new(0, 10, ExplorationStepHardness::Normal);
         assert_eq!(result, expected);
 
         let result = translate_range_step_string_to_exploration_step("9..7".to_string());
@@ -492,41 +396,19 @@ mod tests {
     #[test]
     fn new_works_01() {
         let exploration_str = "0/..8/*h/6..9a/*'/40a";
-        let result = ExplorationPath::new(exploration_str, 5).unwrap();
+        let result = ExplorationPath::new(None, exploration_str, 5, false).unwrap();
         let expected = ExplorationPath {
-            path: vec![
-                ExplorationStep {
-                    start_inclusive: 0,
-                    end_inclusive: 0,
-                    hardness: ExplorationStepHardness::Normal,
-                },
-                ExplorationStep {
-                    start_inclusive: 0,
-                    end_inclusive: 8,
-                    hardness: ExplorationStepHardness::Normal,
-                },
-                ExplorationStep {
-                    start_inclusive: 0,
-                    end_inclusive: 5,
-                    hardness: ExplorationStepHardness::Hardened,
-                },
-                ExplorationStep {
-                    start_inclusive: 6,
-                    end_inclusive: 9,
-                    hardness: ExplorationStepHardness::HardenedAndNormal,
-                },
-                ExplorationStep {
-                    start_inclusive: 0,
-                    end_inclusive: 5,
-                    hardness: ExplorationStepHardness::Hardened,
-                },
-                ExplorationStep {
-                    start_inclusive: 40,
-                    end_inclusive: 40,
-                    hardness: ExplorationStepHardness::HardenedAndNormal,
-                },
+            base_paths: vec![DerivationPath::from_str("m").unwrap()],
+            explore: vec![
+                ExplorationStep::new(0, 0, ExplorationStepHardness::Normal),
+                ExplorationStep::new(0, 8, ExplorationStepHardness::Normal),
+                ExplorationStep::new(0, 5, ExplorationStepHardness::Hardened),
+                ExplorationStep::new(6, 9, ExplorationStepHardness::HardenedAndNormal),
+                ExplorationStep::new(0, 5, ExplorationStepHardness::Hardened),
+                ExplorationStep::new(40, 40, ExplorationStepHardness::HardenedAndNormal),
             ],
             depth: 5,
+            sweep: false,
         };
         assert_eq!(expected, result);
     }
@@ -534,14 +416,16 @@ mod tests {
     #[test]
     fn new_works_02() {
         let exploration_str = "..9a";
-        let result = ExplorationPath::new(exploration_str, 5).unwrap();
+        let result = ExplorationPath::new(None, exploration_str, 5, false).unwrap();
         let expected = ExplorationPath {
-            path: vec![ExplorationStep {
-                start_inclusive: 0,
-                end_inclusive: 9,
-                hardness: ExplorationStepHardness::HardenedAndNormal,
-            }],
+            base_paths: vec![DerivationPath::from_str("m").unwrap()],
+            explore: vec![ExplorationStep::new(
+                0,
+                9,
+                ExplorationStepHardness::HardenedAndNormal,
+            )],
             depth: 5,
+            sweep: false,
         };
         assert_eq!(result, expected);
     }
@@ -549,154 +433,57 @@ mod tests {
     #[test]
     fn new_works_03() {
         let exploration_str = "0u/..8/*h/6..9a/*'/40a";
-        let result = ExplorationPath::new(exploration_str, 5);
+        let result = ExplorationPath::new(None, exploration_str, 5, false);
         assert!(result.is_err())
     }
 
     #[test]
     fn new_works_04() {
         let exploration_str = "./.8";
-        let result = ExplorationPath::new(exploration_str, 5);
+        let result = ExplorationPath::new(None, exploration_str, 5, false);
         assert!(result.is_err())
     }
 
     #[test]
     fn new_works_05() {
         let exploration_str = "";
-        let result = ExplorationPath::new(exploration_str, 5);
+        let result = ExplorationPath::new(None, exploration_str, 5, false);
         assert!(result.is_err());
     }
 
     #[test]
     fn num_of_paths_works_01() {
-        let exploration_path = ExplorationPath::new("..8", 5).unwrap();
+        let exploration_path = ExplorationPath::new(None, "..8", 5, false).unwrap();
         assert_eq!(exploration_path.num_of_paths(), 9);
 
-        let exploration_path = ExplorationPath::new("4..8h", 5).unwrap();
+        let exploration_path = ExplorationPath::new(None, "4..8h", 5, false).unwrap();
         assert_eq!(exploration_path.num_of_paths(), 5);
 
-        let exploration_path = ExplorationPath::new("8'", 5).unwrap();
+        let exploration_path = ExplorationPath::new(None, "8'", 5, false).unwrap();
         assert_eq!(exploration_path.num_of_paths(), 1);
 
-        let exploration_path = ExplorationPath::new("*a", 5).unwrap();
+        let exploration_path = ExplorationPath::new(None, "*a", 5, false).unwrap();
         assert_eq!(exploration_path.num_of_paths(), 12);
 
-        let exploration_path = ExplorationPath::new("..8/*a", 5).unwrap();
+        let exploration_path = ExplorationPath::new(None, "..8/*a", 5, false).unwrap();
         assert_eq!(exploration_path.num_of_paths(), 108);
 
-        let exploration_path = ExplorationPath::new("3..9h/*'/9a/*/*h", 5).unwrap();
+        let exploration_path = ExplorationPath::new(None, "3..9h/*'/9a/*/*h", 5, false).unwrap();
         assert_eq!(exploration_path.num_of_paths(), 3024);
 
-        let exploration_path = ExplorationPath::new("/8/*a/..90'/0", 5).unwrap();
+        let exploration_path = ExplorationPath::new(None, "/8/*a/..90'/0", 5, false).unwrap();
         assert_eq!(exploration_path.num_of_paths(), 1092);
     }
 
     #[test]
-    fn generate_derivation_paths_for_exploration_path_works_01() {
-        let exploration_path = ExplorationPath::new("*/9..10h/4a", 1).unwrap();
-        let mut result = HashSet::new();
-        result.extend(
-            exploration_path
-                .generate_derivation_paths_for_exploration_path()
-                .unwrap(),
-        );
-
-        let expected_vec = vec![
-            DerivationPath::from_str("m/0/9h/4").unwrap(),
-            DerivationPath::from_str("m/0/9h/4h").unwrap(),
-            DerivationPath::from_str("m/0/10h/4").unwrap(),
-            DerivationPath::from_str("m/0/10h/4h").unwrap(),
-            DerivationPath::from_str("m/1/9h/4").unwrap(),
-            DerivationPath::from_str("m/1/9h/4h").unwrap(),
-            DerivationPath::from_str("m/1/10h/4").unwrap(),
-            DerivationPath::from_str("m/1/10h/4h").unwrap(),
-        ];
-        let mut expected = HashSet::new();
-        expected.extend(expected_vec);
-        assert_eq!(expected, result);
-    }
-
-    #[test]
-    fn generate_derivation_paths_for_exploration_path_works_02() {
-        let exploration_path = ExplorationPath::new("*'/..2h/4", 1).unwrap();
-        let mut result = HashSet::new();
-        result.extend(
-            exploration_path
-                .generate_derivation_paths_for_exploration_path()
-                .unwrap(),
-        );
-
-        let expected_vec = vec![
-            DerivationPath::from_str("m/0'/0h/4").unwrap(),
-            DerivationPath::from_str("m/0'/1h/4").unwrap(),
-            DerivationPath::from_str("m/0'/2h/4").unwrap(),
-            DerivationPath::from_str("m/1'/0h/4").unwrap(),
-            DerivationPath::from_str("m/1'/1h/4").unwrap(),
-            DerivationPath::from_str("m/1'/2h/4").unwrap(),
-        ];
-        let mut expected = HashSet::new();
-        expected.extend(expected_vec);
-        assert_eq!(expected, result);
-    }
-
-    #[test]
-    fn generate_sweep_exploration_paths_works_01() {
-        let exploration_path = ExplorationPath::new("*a/..2h/4", 1).unwrap();
-        let mut result = HashSet::new();
-        result.extend(
-            exploration_path
-                .generate_derivation_paths_for_exploration_path_sweep()
-                .unwrap(),
-        );
-
-        let expected_vec = vec![
-            DerivationPath::from_str("m/0/0h/4").unwrap(),
-            DerivationPath::from_str("m/0/1h/4").unwrap(),
-            DerivationPath::from_str("m/0/2h/4").unwrap(),
-            DerivationPath::from_str("m/0'/0h/4").unwrap(),
-            DerivationPath::from_str("m/0'/1h/4").unwrap(),
-            DerivationPath::from_str("m/0'/2h/4").unwrap(),
-            DerivationPath::from_str("m/1/0h/4").unwrap(),
-            DerivationPath::from_str("m/1/1h/4").unwrap(),
-            DerivationPath::from_str("m/1/2h/4").unwrap(),
-            DerivationPath::from_str("m/1'/0h/4").unwrap(),
-            DerivationPath::from_str("m/1'/1h/4").unwrap(),
-            DerivationPath::from_str("m/1'/2h/4").unwrap(),
-            //
-            DerivationPath::from_str("m/0/0h").unwrap(),
-            DerivationPath::from_str("m/0/1h").unwrap(),
-            DerivationPath::from_str("m/0/2h").unwrap(),
-            DerivationPath::from_str("m/0'/0h").unwrap(),
-            DerivationPath::from_str("m/0'/1h").unwrap(),
-            DerivationPath::from_str("m/0'/2h").unwrap(),
-            DerivationPath::from_str("m/1/0h").unwrap(),
-            DerivationPath::from_str("m/1/1h").unwrap(),
-            DerivationPath::from_str("m/1/2h").unwrap(),
-            DerivationPath::from_str("m/1'/0h").unwrap(),
-            DerivationPath::from_str("m/1'/1h").unwrap(),
-            DerivationPath::from_str("m/1'/2h").unwrap(),
-            //
-            DerivationPath::from_str("m/0'").unwrap(),
-            DerivationPath::from_str("m/1").unwrap(),
-            DerivationPath::from_str("m/0").unwrap(),
-            DerivationPath::from_str("m/1'").unwrap(),
-            //
-            DerivationPath::from_str("m").unwrap(),
-        ];
-        let mut expected = HashSet::new();
-        expected.extend(expected_vec);
-        assert_eq!(expected, result);
-    }
-
-    #[test]
     fn num_of_paths_sweep_from_root_works_01() {
-        let exploration_path = ExplorationPath::new("*a/..2h/4", 1).unwrap();
-        assert_eq!(exploration_path.num_of_paths_sweep_from_root(), 29);
+        let exploration_path = ExplorationPath::new(None, "*a/..2h/4", 1, false).unwrap();
+        assert_eq!(exploration_path.num_of_paths_sweep(), 29);
     }
 
     #[test]
     fn num_of_paths_sweep_from_root_works_02() {
-        let exploration_path = ExplorationPath::new("*a/..2h/4", 3).unwrap();
-        assert_eq!(exploration_path.num_of_paths_sweep_from_root(), 57);
+        let exploration_path = ExplorationPath::new(None, "*a/..2h/4", 3, false).unwrap();
+        assert_eq!(exploration_path.num_of_paths_sweep(), 57);
     }
 }

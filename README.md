@@ -23,13 +23,13 @@ Please note that this is an work in progress at the moment and breaking changes 
 We plan to:
 
 1. Build a GUI.
-2. Add async support for faster preparation.
+2. Add async support for faster preparation. [Done in v1.0.0]
 3. Add support for multisigs.
 4. Optimize the txoutset crate for retriever's specific use case of the dump file.
 5. Add more documentation.
 6. Increase test coverage.
 7. Improve error messages.
-8. Add tracing.
+8. Add tracing. [Done in v1.0.0]
 9. Add CI/CD.
 
 ### Usage

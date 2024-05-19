@@ -40,6 +40,7 @@ impl Zeroize for ExplorerSetting {
     fn zeroize(&mut self) {
         self.mnemonic.zeroize();
         self.passphrase.zeroize();
+        self.base_derivation_paths.zeroize();
         self.exploration_path.zeroize();
         self.exploration_depth.zeroize();
         self.network = bitcoin::Network::Regtest;

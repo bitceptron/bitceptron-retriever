@@ -23,8 +23,8 @@ const BITCOIN_CONF_PATH: &str = "tests/bitcoin.conf";
 const REGTEST_PORTS: [&str; 2] = ["18998", "18999"];
 const TEMP_DIR_PATH: &str = "tests/temp";
 
-#[test]
-fn test_with_regtest() {
+#[tokio::test]
+async fn test_with_regtest() {
     // Finding any bitcoind process using regtest ports.
     let pid_of_processes_using_ports: Vec<String> = Command::new("lsof")
         .args([
@@ -53,7 +53,7 @@ fn test_with_regtest() {
         }
     };
     // Clear possible past data in temp.
-    let _ = fs::remove_dir_all(TEMP_DIR_PATH).unwrap();
+    let _ = fs::remove_dir_all(TEMP_DIR_PATH);
     let _ = fs::create_dir_all(TEMP_DIR_PATH).unwrap();
 
     // Copy bitcoin.conf to temp.
@@ -138,6 +138,7 @@ fn test_with_regtest() {
         "".to_string(),
         Some(vec!["m/0".to_string()]),
         Some("*a/*a/*a".to_string()),
+        None,
         Some(false),
         Some(10),
         Some(bitcoin::Network::Regtest),
@@ -146,12 +147,12 @@ fn test_with_regtest() {
             .to_string_lossy()
             .to_string(),
     );
-    let mut ret = Retriever::new(setting).unwrap();
+    let mut ret = Retriever::new(setting).await.unwrap();
     let _ = ret
         .check_for_dump_in_data_dir_or_create_dump_file()
         .unwrap();
     let _ = ret.populate_uspk_set().unwrap();
-    let _ = ret.search_the_uspk_set().unwrap();
+    let _ = ret.search_the_uspk_set().await.unwrap();
     let _ = ret.get_details_of_finds_from_bitcoincore();
     let _ = ret.print_detailed_finds_on_console();
     assert_eq!(

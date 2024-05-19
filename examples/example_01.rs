@@ -17,13 +17,17 @@ use bitcoin::{
 };
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use miniscript::Descriptor;
+use tracing_log::LogTracer;
 
 const BITCOIND_PATH: &str = "tests/bitcoind";
 const BITCOIN_CONF_PATH: &str = "tests/bitcoin.conf";
 const REGTEST_PORTS: [&str; 2] = ["18998", "18999"];
 const TEMP_DIR_PATH: &str = "tests/temp";
 
-fn main() {
+#[tokio::main]
+async fn main() {
+    LogTracer::init().unwrap();
+    tracing::subscriber::set_global_default(tracing_subscriber::FmtSubscriber::new()).unwrap();
     // Finding any bitcoind process using regtest ports.
     let pid_of_processes_using_ports: Vec<String> = Command::new("lsof")
         .args([
@@ -54,7 +58,7 @@ fn main() {
         }
     };
     // Clear possible past data in temp.
-    let _ = fs::remove_dir_all(TEMP_DIR_PATH).unwrap();
+    let _ = fs::remove_dir_all(TEMP_DIR_PATH);
     let _ = fs::create_dir_all(TEMP_DIR_PATH).unwrap();
 
     // Copy bitcoin.conf to temp.
@@ -100,7 +104,7 @@ fn main() {
         "response tag season adapt huge win catalog correct harbor cruise result east";
     let mnemonic = Mnemonic::from_str(&mnemonic_str).unwrap();
     let xpriv = Xpriv::new_master(bitcoin::Network::Regtest, &mnemonic.to_seed("")).unwrap();
-    let derivation_path = DerivationPath::from_str("m/0/0'/5/8h").unwrap();
+    let derivation_path = DerivationPath::from_str("m/0/0'/1/2h").unwrap();
     let secretkey_for_derivation_path = xpriv
         .derive_priv(&Secp256k1::new(), &derivation_path)
         .unwrap()
@@ -139,6 +143,7 @@ fn main() {
         "".to_string(),
         Some(vec!["m/0".to_string()]),
         Some("*a/*a/*a".to_string()),
+        None,
         Some(false),
         Some(10),
         Some(bitcoin::Network::Regtest),
@@ -147,12 +152,12 @@ fn main() {
             .to_string_lossy()
             .to_string(),
     );
-    let mut ret = Retriever::new(setting).unwrap();
+    let mut ret = Retriever::new(setting).await.unwrap();
     let _ = ret
         .check_for_dump_in_data_dir_or_create_dump_file()
         .unwrap();
     let _ = ret.populate_uspk_set().unwrap();
-    let _ = ret.search_the_uspk_set().unwrap();
+    let _ = ret.search_the_uspk_set().await.unwrap();
     let _ = ret.get_details_of_finds_from_bitcoincore();
     let _ = ret.print_detailed_finds_on_console();
     assert_eq!(

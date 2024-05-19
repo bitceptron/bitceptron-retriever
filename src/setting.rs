@@ -1,10 +1,12 @@
 use config::Config;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
+use tracing::info;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::{
     client::client_setting::ClientSetting,
+    covered_descriptors::CoveredDescriptors,
     data::{
         defaults::{
             DEFAULT_BITCOINCORE_RPC_PORT, DEFAULT_BITCOINCORE_RPC_TIMEOUT_SECONDS,
@@ -17,7 +19,7 @@ use crate::{
     explorer::explorer_setting::ExplorerSetting,
 };
 
-#[derive(Debug, Serialize, Deserialize, Getters, Default)]
+#[derive(Debug, Serialize, Deserialize, Getters)]
 #[get = "pub with_prefix"]
 pub struct RetrieverSetting {
     bitcoincore_rpc_url: Option<String>,
@@ -31,6 +33,7 @@ pub struct RetrieverSetting {
     passphrase: String,
     base_derivation_paths: Option<Vec<String>>,
     exploration_path: Option<String>,
+    selected_descriptors: Option<Vec<CoveredDescriptors>>,
     sweep: Option<bool>,
     exploration_depth: Option<u32>,
     network: Option<bitcoin::Network>,
@@ -39,6 +42,7 @@ pub struct RetrieverSetting {
 
 impl Zeroize for RetrieverSetting {
     fn zeroize(&mut self) {
+        info!("Zeroizing retriever setting initialized.");
         self.bitcoincore_rpc_url.zeroize();
         self.bitcoincore_rpc_port.zeroize();
         self.bitcoincore_rpc_cookie_path.zeroize();
@@ -50,6 +54,7 @@ impl Zeroize for RetrieverSetting {
         self.sweep.zeroize();
         self.exploration_depth.zeroize();
         self.network = Some(bitcoin::Network::Signet);
+        info!("Zeroizing retriever setting finished.");
     }
 }
 
@@ -68,6 +73,7 @@ impl RetrieverSetting {
         passphrase: String,
         base_derivation_paths: Option<Vec<String>>,
         exploration_path: Option<String>,
+        selected_descriptors: Option<Vec<CoveredDescriptors>>,
         sweep: Option<bool>,
         exploration_depth: Option<u32>,
         network: Option<bitcoin::Network>,
@@ -82,6 +88,7 @@ impl RetrieverSetting {
             passphrase,
             base_derivation_paths,
             exploration_path,
+            selected_descriptors,
             sweep,
             exploration_depth,
             network,

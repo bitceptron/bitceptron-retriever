@@ -1,7 +1,11 @@
 use bitceptron_retriever::{retriever::Retriever, setting::RetrieverSetting};
 use clap::{Arg, Command};
+use tracing_log::LogTracer;
 
-fn main() {
+#[tokio::main]
+async fn main() {
+    LogTracer::init().unwrap();
+    tracing::subscriber::set_global_default(tracing_subscriber::FmtSubscriber::new()).unwrap();
     let matches = Command::new("Bitceptron Scanner")
         .version(env!("CARGO_PKG_VERSION"))
         .about("Scans the UTXO set for BIP32 custom exploration paths from various derivation paths in use by bitcoin wallets.")
@@ -19,7 +23,7 @@ fn main() {
     let setting = RetrieverSetting::from_config_file(config_file_path_string)
         .map_err(|err| panic!("Error while reading the config file: {:#?}", err))
         .unwrap();
-    let mut ret = Retriever::new(setting)
+    let mut ret = Retriever::new(setting).await
         .map_err(|err| panic!("Error while creating the retriever: {:#?}", err))
         .unwrap();
     let _ = ret
@@ -36,7 +40,7 @@ fn main() {
         .map_err(|err| panic!("Error while populating in-memory UTXO database: {:#?}", err))
         .unwrap();
     let _ = ret
-        .search_the_uspk_set()
+        .search_the_uspk_set().await
         .map_err(|err| panic!("Error while searching in-memory UTXO database: {:#?}", err))
         .unwrap();
     let _ = ret
