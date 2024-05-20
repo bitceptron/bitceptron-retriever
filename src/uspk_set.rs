@@ -20,7 +20,7 @@ impl UnspentScriptPupKeysSet {
         let mut set = hashbrown::HashSet::new();
         let mut dump = txoutset::Dump::new(dump_file_path, txoutset::ComputeAddresses::No)?;
         // Loop information.
-        let step_size = 100_000u64;
+        let step_size = 100u64;
         let mut average_step_time_in_milis = 0u128;
         let total_loops = dump.utxo_set_size;
         let mut loops_done = 0u64;

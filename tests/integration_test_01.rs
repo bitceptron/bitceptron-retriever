@@ -1,5 +1,5 @@
 use std::{
-    fs,
+    fs::{self},
     io::BufRead,
     path::PathBuf,
     process::{Command, Stdio},
@@ -57,6 +57,7 @@ async fn test_with_regtest() {
 
     // Copy bitcoin.conf to temp.
     let _ = fs::copy(BITCOIN_CONF_PATH, format!("{}/bitcoin.conf", TEMP_DIR_PATH)).unwrap();
+    let _ = fs::remove_dir_all(format!("{}/regtest", TEMP_DIR_PATH));
 
     // Run the regtest daemon.
     Command::new(BITCOIND_PATH.to_owned())

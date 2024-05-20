@@ -152,7 +152,6 @@ impl Retriever {
         let secp = Secp256k1::new();
         let select_descriptors = self.select_descriptors.clone();
         let uspk_set = self.uspk_set.get_inner_set();
-        let mut found = vec![];
         let mut paths_received = 0;
         while let Some(path) = receiver.recv().await {
             paths_received += 1;
@@ -175,7 +174,7 @@ impl Retriever {
                 let target = desc_pubkey.as_bytes();
                 if uspk_set.contains(target) {
                     warn!("Found a non-empty ScriptPubKey.");
-                    found.push(PathDescriptorPair::new(path.to_owned(), desc));
+                    self.finds.lock().unwrap().push(PathDescriptorPair::new(path.to_owned(), desc));
                 }
             }
             if select_descriptors.contains(&CoveredDescriptors::P2pkh) {
@@ -186,7 +185,7 @@ impl Retriever {
                 let target = desc_pubkey.as_bytes();
                 if uspk_set.contains(target) {
                     warn!("Found a non-empty ScriptPubKey.");
-                    found.push(PathDescriptorPair::new(path.to_owned(), desc));
+                    self.finds.lock().unwrap().push(PathDescriptorPair::new(path.to_owned(), desc));
                 }
             }
             if select_descriptors.contains(&CoveredDescriptors::P2wpkh) {
@@ -197,7 +196,7 @@ impl Retriever {
                 let target = desc_pubkey.as_bytes();
                 if uspk_set.contains(target) {
                     warn!("Found a non-empty ScriptPubKey.");
-                    found.push(PathDescriptorPair::new(path.to_owned(), desc));
+                    self.finds.lock().unwrap().push(PathDescriptorPair::new(path.to_owned(), desc));
                 }
             }
             if select_descriptors.contains(&CoveredDescriptors::P2shwpkh) {
@@ -208,7 +207,7 @@ impl Retriever {
                 let target = desc_pubkey.as_bytes();
                 if uspk_set.contains(target) {
                     warn!("Found a non-empty ScriptPubKey.");
-                    found.push(PathDescriptorPair::new(path.to_owned(), desc));
+                    self.finds.lock().unwrap().push(PathDescriptorPair::new(path.to_owned(), desc));
                 }
             }
             if select_descriptors.contains(&CoveredDescriptors::P2tr) {
@@ -219,11 +218,10 @@ impl Retriever {
                 let target = desc_pubkey.as_bytes();
                 if uspk_set.contains(target) {
                     warn!("Found a non-empty ScriptPubKey.");
-                    found.push(PathDescriptorPair::new(path.to_owned(), desc));
+                    self.finds.lock().unwrap().push(PathDescriptorPair::new(path.to_owned(), desc));
                 }
             }
         }
-        self.finds = Arc::new(Mutex::new(found));
         Ok(())
     }
 

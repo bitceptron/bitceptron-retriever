@@ -23,7 +23,8 @@ const BITCOIND_PATH: &str = "tests/bitcoind";
 const BITCOIN_CONF_PATH: &str = "tests/bitcoin.conf";
 const REGTEST_PORTS: [&str; 2] = ["18998", "18999"];
 const TEMP_DIR_PATH: &str = "tests/temp";
-
+/// This example runs an instance of regtest. Creates some utxos. Creates an address. Then sends some bitcoins to the address.
+/// After that the retriever in run.
 #[tokio::main]
 async fn main() {
     LogTracer::init().unwrap();
@@ -59,6 +60,9 @@ async fn main() {
     };
     // Create temp dir.
     let _ = fs::create_dir_all(TEMP_DIR_PATH);
+    let _ = fs::remove_dir_all(format!("{}/regtest", TEMP_DIR_PATH));
+    let _ = fs::remove_file(format!("{}/utxo_dump.dat", TEMP_DIR_PATH));
+
 
     // Copy bitcoin.conf to temp.
     let _ = fs::copy(BITCOIN_CONF_PATH, format!("{}/bitcoin.conf", TEMP_DIR_PATH)).unwrap();
@@ -116,7 +120,39 @@ async fn main() {
     // Make client mine some.
     let _ = client.generate_to_address(50, &mining_address);
     let _ = client.generate_to_address(50, &mining_address);
-    let _ = client.generate_to_address(50, &mining_address);
+
+    let mut i = 10;
+    while i > 0 {
+        let _ = client.generate_to_address(
+            50,
+            &client
+                .get_new_address(
+                    Some(&format!("mining_address_{}", i)),
+                    Some(bitcoincore_rpc::json::AddressType::Bech32),
+                )
+                .unwrap()
+                .require_network(bitcoin::Network::Regtest)
+                .unwrap(),
+        );
+        i -= 1;
+    }
+
+    let mut i = 10;
+    while i > 0 {
+        let _ = client.generate_to_address(
+            50,
+            &client
+                .get_new_address(
+                    Some(&format!("mining_address_{}", i)),
+                    Some(bitcoincore_rpc::json::AddressType::Bech32m),
+                )
+                .unwrap()
+                .require_network(bitcoin::Network::Regtest)
+                .unwrap(),
+        );
+        i -= 1;
+    }
+
     // Send 42 bitcoins to our address.
     let _txid = client
         .send_to_address(
