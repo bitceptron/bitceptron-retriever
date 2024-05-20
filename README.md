@@ -4,7 +4,9 @@ This is part of the bitceptron product suite. A utility crate to scan the utxo s
 
 ## WIP notice
 
-***Please note that this is a work in progress at the moment and breaking changes might happen. NOT PRODUCTION READY YET.***
+***Please note that this is a work in progress at the moment and breaking changes might happen.***
+
+***NOT PRODUCTION READY YET.***
 
 ### About
 
