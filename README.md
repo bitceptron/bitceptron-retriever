@@ -16,7 +16,7 @@ Bitceptron retriever uses the txout dump of bitcoincore to scan the utxo set for
 
 ### WIP notice
 
-Please note that this is an work in progress at the moment and breaking changes might happen.
+**Please note that this is a work in progress at the moment and breaking changes might happen.**
 
 ### Future steps
 
