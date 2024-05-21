@@ -149,9 +149,9 @@ async fn test_with_regtest() {
     );
     let mut ret = Retriever::new(setting).await.unwrap();
     let _ = ret
-        .check_for_dump_in_data_dir_or_create_dump_file()
+        .check_for_dump_in_data_dir_or_create_dump_file().await
         .unwrap();
-    let _ = ret.populate_uspk_set().unwrap();
+    let _ = ret.populate_uspk_set().await.unwrap();
     let _ = ret.search_the_uspk_set().await.unwrap();
     let _ = ret.get_details_of_finds_from_bitcoincore();
     let _ = ret.print_detailed_finds_on_console();

@@ -17,7 +17,9 @@ pub enum RetrieverError {
     NoSearchHasBeenPerformed,
     DetailsHaveNotBeenFetched,
     ConfigError(config::ConfigError),
-    TokioJoinError(tokio::task::JoinError)
+    TokioJoinError(tokio::task::JoinError),
+    PopulatingUSPKSetInProgress,
+    USPKSetAlreadyPopulated,
 }
 
 impl From<bitcoincore_rpc::Error> for RetrieverError {

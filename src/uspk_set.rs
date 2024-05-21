@@ -1,4 +1,7 @@
-use std::{sync::Arc, time::Instant};
+use std::{
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 
 use num_format::{Locale, ToFormattedString};
 use tracing::info;
@@ -8,16 +11,24 @@ use crate::error::RetrieverError;
 #[derive(Debug)]
 pub struct UnspentScriptPupKeysSet {
     set: Arc<hashbrown::HashSet<Vec<u8>>>,
+    status: Arc<Mutex<Vec<USPKSetStatus>>>,
 }
 
 impl UnspentScriptPupKeysSet {
     pub fn new() -> Self {
         let set: hashbrown::HashSet<Vec<u8>> = hashbrown::HashSet::new();
-        UnspentScriptPupKeysSet { set: Arc::new(set) }
+        UnspentScriptPupKeysSet {
+            set: Arc::new(set),
+            status: Arc::new(Mutex::new(vec![USPKSetStatus::Empty])),
+        }
     }
-    pub fn populate_with_dump_file(&mut self, dump_file_path: &str) -> Result<(), RetrieverError> {
+    pub async fn populate_with_dump_file(
+        &mut self,
+        dump_file_path: &str,
+    ) -> Result<(), RetrieverError> {
         let creation_start = Instant::now();
-        let mut set = hashbrown::HashSet::new();
+        let status = self.status.clone();
+        let (set_sender, set_receiver) = tokio::sync::oneshot::channel();
         let mut dump = txoutset::Dump::new(dump_file_path, txoutset::ComputeAddresses::No)?;
         // Loop information.
         let step_size = 100u64;
@@ -28,32 +39,50 @@ impl UnspentScriptPupKeysSet {
         let mut steps_remaining = (total_loops / step_size) as u128;
         let mut step_start_time = Instant::now();
         // Loop.
-        while let Some(txout) = dump.next() {
-            set.insert(txout.script_pubkey.as_bytes().to_vec());
-            // Loop info stuff.
-            loops_done += 1;
-            if loops_done % step_size == 0 {
-                steps_done += 1;
-                steps_remaining -= 1;
-                average_step_time_in_micros = (step_start_time.elapsed().as_micros()
-                    + (steps_done - 1) * average_step_time_in_micros)
-                    / steps_done as u128;
-                let remaining_time_in_milis = average_step_time_in_micros * steps_remaining;
-                info!(
-                    "Utxos moved to database: {} of {}",
-                    loops_done.to_formatted_string(&Locale::en),
-                    total_loops.to_formatted_string(&Locale::en)
-                );
-                info!("Estimated time to completion: ~{} minutes.", (1 + remaining_time_in_milis / 60_000_000).to_formatted_string(&Locale::en));
-                step_start_time = Instant::now();
+        tokio::task::spawn_blocking(move || {
+            status.lock().unwrap()[0] = USPKSetStatus::Populating;
+            let mut set = hashbrown::HashSet::new();
+            loop {
+                match dump.next() {
+                    Some(txout) => {
+                        set.insert(txout.script_pubkey.as_bytes().to_vec());
+                        // Loop info stuff.
+                        loops_done += 1;
+                        if loops_done % step_size == 0 {
+                            steps_done += 1;
+                            steps_remaining -= 1;
+                            average_step_time_in_micros = (step_start_time.elapsed().as_micros()
+                                + (steps_done - 1) * average_step_time_in_micros)
+                                / steps_done as u128;
+                            let remaining_time_in_milis =
+                                average_step_time_in_micros * steps_remaining;
+                            info!(
+                                "Utxos moved to database: {} of {}",
+                                loops_done.to_formatted_string(&Locale::en),
+                                total_loops.to_formatted_string(&Locale::en)
+                            );
+                            info!(
+                                "Estimated time to completion: ~{} minutes.",
+                                (1 + remaining_time_in_milis / 60_000_000)
+                                    .to_formatted_string(&Locale::en)
+                            );
+                            step_start_time = Instant::now();
+                        }
+                    }
+                    None => {
+                        let _ = set_sender.send(set);
+                        status.lock().unwrap()[0] = USPKSetStatus::Ready;
+                        break;
+                    }
+                }
             }
-        }
+        });
         info!(
             "UTXO database of {} unspent scripts populated in ~{} mins.",
             total_loops.to_formatted_string(&Locale::en),
             1 + creation_start.elapsed().as_secs() / 60
         );
-        self.set = Arc::new(set);
+        self.set = Arc::new(set_receiver.await.unwrap());
         Ok(())
     }
 
@@ -111,7 +140,22 @@ impl UnspentScriptPupKeysSet {
     //     finds
     // }
 
-    pub fn get_inner_set(&self) -> Arc<hashbrown::HashSet<Vec<u8>>> {
+    pub fn get_immutable_inner_set(&self) -> Arc<hashbrown::HashSet<Vec<u8>>> {
         self.set.clone()
     }
+
+    pub fn get_status(&self) -> USPKSetStatus {
+        self.status.lock().unwrap()[0]
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.set.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum USPKSetStatus {
+    Empty,
+    Populating,
+    Ready,
 }

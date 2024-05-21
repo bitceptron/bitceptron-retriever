@@ -27,7 +27,7 @@ async fn main() {
         .map_err(|err| panic!("Error while creating the retriever: {:#?}", err))
         .unwrap();
     let _ = ret
-        .check_for_dump_in_data_dir_or_create_dump_file()
+        .check_for_dump_in_data_dir_or_create_dump_file().await
         .map_err(|err| {
             panic!(
                 "Error while checking/creating dump file in data dir: {:#?}",
@@ -36,7 +36,7 @@ async fn main() {
         })
         .unwrap();
     let _ = ret
-        .populate_uspk_set()
+        .populate_uspk_set().await
         .map_err(|err| panic!("Error while populating in-memory UTXO database: {:#?}", err))
         .unwrap();
     let _ = ret
@@ -44,7 +44,7 @@ async fn main() {
         .map_err(|err| panic!("Error while searching in-memory UTXO database: {:#?}", err))
         .unwrap();
     let _ = ret
-        .get_details_of_finds_from_bitcoincore()
+        .get_details_of_finds_from_bitcoincore().await
         .map_err(|err| {
             panic!(
                 "Error while fetching details of finds from bitcoincore: {:#?}",

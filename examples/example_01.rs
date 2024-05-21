@@ -17,6 +17,7 @@ use bitcoin::{
 };
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use miniscript::Descriptor;
+use tokio::join;
 use tracing_log::LogTracer;
 
 const BITCOIND_PATH: &str = "tests/bitcoind";
@@ -62,7 +63,6 @@ async fn main() {
     let _ = fs::create_dir_all(TEMP_DIR_PATH);
     let _ = fs::remove_dir_all(format!("{}/regtest", TEMP_DIR_PATH));
     let _ = fs::remove_file(format!("{}/utxo_dump.dat", TEMP_DIR_PATH));
-
 
     // Copy bitcoin.conf to temp.
     let _ = fs::copy(BITCOIN_CONF_PATH, format!("{}/bitcoin.conf", TEMP_DIR_PATH)).unwrap();
@@ -137,7 +137,7 @@ async fn main() {
         i -= 1;
     }
 
-    let mut i = 10;
+    let mut i = 5;
     while i > 0 {
         let _ = client.generate_to_address(
             50,
@@ -187,13 +187,11 @@ async fn main() {
             .to_string_lossy()
             .to_string(),
     );
-    let mut ret = Retriever::new(setting).await.unwrap();
-    let _ = ret
-        .check_for_dump_in_data_dir_or_create_dump_file()
-        .unwrap();
-    let _ = ret.populate_uspk_set().unwrap();
-    let _ = ret.search_the_uspk_set().await.unwrap();
-    let _ = ret.get_details_of_finds_from_bitcoincore();
+    let mut ret = join!(Retriever::new(setting)).0.unwrap();
+    let _ = join!(ret.check_for_dump_in_data_dir_or_create_dump_file());
+    let _ = join!(ret.populate_uspk_set());
+    let _ = join!(ret.search_the_uspk_set());
+    let _ = join!(ret.get_details_of_finds_from_bitcoincore());
     let _ = ret.print_detailed_finds_on_console();
     assert_eq!(
         ret.get_detailed_finds()
