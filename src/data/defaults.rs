@@ -7,6 +7,5 @@ pub const DEFAULT_BITCOINCORE_RPC_PORT: &str = "8332";
 pub const DEFAULT_BITCOINCORE_RPC_TIMEOUT_SECONDS: u64 = 6800;
 pub const DEFAULT_SWEEP: bool = false;
 pub const DEFAULT_NETWORK: bitcoin::Network = bitcoin::Network::Bitcoin;
-pub const NUMBER_OF_DESCRIPTOR_CLASSES: u64 = 5;
 pub const DEFAULT_SELECTED_DESCRIPTORS: [CoveredDescriptors; 5] =
     [P2pk, P2pkh, P2shwpkh, P2tr, P2wpkh];

@@ -11,7 +11,13 @@ use crate::error::RetrieverError;
 #[derive(Debug)]
 pub struct UnspentScriptPupKeysSet {
     set: Arc<hashbrown::HashSet<Vec<u8>>>,
-    status: Arc<Mutex<Vec<USPKSetStatus>>>,
+    status: Arc<Mutex<Vec<UspkSetStatus>>>,
+}
+
+impl Default for UnspentScriptPupKeysSet {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl UnspentScriptPupKeysSet {
@@ -19,7 +25,7 @@ impl UnspentScriptPupKeysSet {
         let set: hashbrown::HashSet<Vec<u8>> = hashbrown::HashSet::new();
         UnspentScriptPupKeysSet {
             set: Arc::new(set),
-            status: Arc::new(Mutex::new(vec![USPKSetStatus::Empty])),
+            status: Arc::new(Mutex::new(vec![UspkSetStatus::Empty])),
         }
     }
     pub async fn populate_with_dump_file(
@@ -40,7 +46,7 @@ impl UnspentScriptPupKeysSet {
         let mut step_start_time = Instant::now();
         // Loop.
         tokio::task::spawn_blocking(move || {
-            status.lock().unwrap()[0] = USPKSetStatus::Populating;
+            status.lock().unwrap()[0] = UspkSetStatus::Populating;
             let mut set = hashbrown::HashSet::new();
             loop {
                 match dump.next() {
@@ -53,7 +59,7 @@ impl UnspentScriptPupKeysSet {
                             steps_remaining -= 1;
                             average_step_time_in_micros = (step_start_time.elapsed().as_micros()
                                 + (steps_done - 1) * average_step_time_in_micros)
-                                / steps_done as u128;
+                                / steps_done;
                             let remaining_time_in_milis =
                                 average_step_time_in_micros * steps_remaining;
                             info!(
@@ -71,7 +77,7 @@ impl UnspentScriptPupKeysSet {
                     }
                     None => {
                         let _ = set_sender.send(set);
-                        status.lock().unwrap()[0] = USPKSetStatus::Ready;
+                        status.lock().unwrap()[0] = UspkSetStatus::Ready;
                         break;
                     }
                 }
@@ -90,7 +96,7 @@ impl UnspentScriptPupKeysSet {
         self.set.clone()
     }
 
-    pub fn get_status(&self) -> USPKSetStatus {
+    pub fn get_status(&self) -> UspkSetStatus {
         self.status.lock().unwrap()[0]
     }
 
@@ -100,7 +106,7 @@ impl UnspentScriptPupKeysSet {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum USPKSetStatus {
+pub enum UspkSetStatus {
     Empty,
     Populating,
     Ready,

@@ -26,7 +26,7 @@ async fn main() {
     let mut ret = Retriever::new(setting).await
         .map_err(|err| panic!("Error while creating the retriever: {:#?}", err))
         .unwrap();
-    let _ = ret
+    ret
         .check_for_dump_in_data_dir_or_create_dump_file().await
         .map_err(|err| {
             panic!(
@@ -35,15 +35,15 @@ async fn main() {
             )
         })
         .unwrap();
-    let _ = ret
+    ret
         .populate_uspk_set().await
         .map_err(|err| panic!("Error while populating in-memory UTXO database: {:#?}", err))
         .unwrap();
-    let _ = ret
+    ret
         .search_the_uspk_set().await
         .map_err(|err| panic!("Error while searching in-memory UTXO database: {:#?}", err))
         .unwrap();
-    let _ = ret
+    ret
         .get_details_of_finds_from_bitcoincore().await
         .map_err(|err| {
             panic!(

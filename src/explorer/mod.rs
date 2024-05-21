@@ -33,14 +33,14 @@ impl Explorer {
         info!("Creation of explorer started.");
         let exploration_path = ExplorationPath::new(
             Some(setting.get_base_derivation_paths().to_owned()),
-            &setting.get_exploration_path(),
+            setting.get_exploration_path(),
             *setting.get_exploration_depth(),
             setting.get_sweep().to_owned(),
         )?;
-        let mut mnemonic = from_input_str_to_mnemonic(&setting.get_mnemonic())?;
-        let mut seed = from_mnemonic_to_seed(mnemonic.clone(), &setting.get_passphrase());
+        let mut mnemonic = from_input_str_to_mnemonic(setting.get_mnemonic())?;
+        let mut seed = from_mnemonic_to_seed(mnemonic.clone(), setting.get_passphrase());
         mnemonic.zeroize();
-        let master_xpriv = from_seed_to_master_xpriv(seed.clone(), *setting.get_network())?;
+        let master_xpriv = from_seed_to_master_xpriv(seed, *setting.get_network())?;
         seed.zeroize();
         info!("Creation of explorer finished successfully.");
         Ok(Explorer {
@@ -60,6 +60,7 @@ impl Zeroize for Explorer {
 }
 
 impl ZeroizeOnDrop for Explorer {}
+
 
 #[cfg(test)]
 mod tests {}

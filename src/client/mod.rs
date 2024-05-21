@@ -24,7 +24,7 @@ impl BitcoincoreRpcClient {
         info!("Creation of bitcoincore rpc client started.");
         let (client_result_sender, mut client_result_receiver) =
             tokio::sync::mpsc::unbounded_channel();
-        let (user, pass) = Auth::CookieFile(PathBuf::from_str(&setting.get_cookie_path()).unwrap())
+        let (user, pass) = Auth::CookieFile(PathBuf::from_str(setting.get_cookie_path()).unwrap())
             .get_user_pass()?;
         tokio::task::spawn_blocking(move || {
             let jsonrpc_build = bitcoincore_rpc::jsonrpc::simple_http::Builder::new()
@@ -52,8 +52,7 @@ impl BitcoincoreRpcClient {
             };
         });
 
-        let client = client_result_receiver.recv().await.unwrap();
-        client
+        client_result_receiver.recv().await.unwrap()
     }
 
     pub async fn dump_utxo_set(
@@ -67,7 +66,7 @@ impl BitcoincoreRpcClient {
             error!("Dump file already exists in datadir.");
             return Err(RetrieverError::DumpFileAlreadyExistsInPath);
         }
-        let _ = fs::create_dir_all(&dir_path)?;
+        fs::create_dir_all(&dir_path)?;
         let client = self.client.clone();
         let (response_sender, response_receiver) = tokio::sync::oneshot::channel();
         tokio::task::spawn_blocking(move || {

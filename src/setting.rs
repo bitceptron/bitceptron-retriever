@@ -98,7 +98,7 @@ impl RetrieverSetting {
 
     pub fn from_config_file(config_file_path: &str) -> Result<Self, RetrieverError> {
         Ok(Config::builder()
-            .add_source(config::File::with_name(&config_file_path))
+            .add_source(config::File::with_name(config_file_path))
             .build()?
             .try_deserialize::<RetrieverSetting>()?)
     }

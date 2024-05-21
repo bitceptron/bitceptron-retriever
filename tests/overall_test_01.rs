@@ -17,11 +17,12 @@ use bitcoin::{
 };
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use miniscript::Descriptor;
+use tokio::join;
 
 const BITCOIND_PATH: &str = "tests/bitcoind";
 const BITCOIN_CONF_PATH: &str = "tests/bitcoin.conf";
 const REGTEST_PORTS: [&str; 2] = ["18998", "18999"];
-const TEMP_DIR_PATH: &str = "tests/temp";
+const TEMP_DIR_PATH: &str = "tests/temp/overall_test_01";
 
 #[tokio::test]
 async fn test_with_regtest() {
@@ -54,6 +55,8 @@ async fn test_with_regtest() {
     };
     // Create temp dir.
     let _ = fs::create_dir_all(TEMP_DIR_PATH);
+    let _ = fs::remove_dir_all(format!("{}/regtest", TEMP_DIR_PATH));
+    let _ = fs::remove_file(format!("{}/utxo_dump.dat", TEMP_DIR_PATH));
 
     // Copy bitcoin.conf to temp.
     let _ = fs::copy(BITCOIN_CONF_PATH, format!("{}/bitcoin.conf", TEMP_DIR_PATH)).unwrap();
@@ -147,13 +150,11 @@ async fn test_with_regtest() {
             .to_string_lossy()
             .to_string(),
     );
-    let mut ret = Retriever::new(setting).await.unwrap();
-    let _ = ret
-        .check_for_dump_in_data_dir_or_create_dump_file().await
-        .unwrap();
-    let _ = ret.populate_uspk_set().await.unwrap();
-    let _ = ret.search_the_uspk_set().await.unwrap();
-    let _ = ret.get_details_of_finds_from_bitcoincore();
+    let mut ret = join!(Retriever::new(setting)).0.unwrap();
+    let _ = join!(ret.check_for_dump_in_data_dir_or_create_dump_file());
+    let _ = join!(ret.populate_uspk_set());
+    let _ = join!(ret.search_the_uspk_set());
+    let _ = join!(ret.get_details_of_finds_from_bitcoincore());
     let _ = ret.print_detailed_finds_on_console();
     assert_eq!(
         ret.get_detailed_finds()

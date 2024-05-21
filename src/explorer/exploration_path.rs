@@ -32,18 +32,14 @@ impl ExplorationPath {
             Some(base_paths) => base_paths
                 .iter()
                 .map(|base_path_string| {
-                    DerivationPath::from_str(&base_path_string)
-                        .map_err(|err| {
-                            return Err::<ExplorationPath, RetrieverError>(
-                                RetrieverError::Bip32Error(err),
-                            );
-                        })
+                    DerivationPath::from_str(base_path_string)
+                        .map_err(RetrieverError::from)
                         .unwrap()
                 })
                 .collect::<Vec<DerivationPath>>(),
             None => vec![DerivationPath::from_str("m").unwrap()],
         };
-        if check_input_chars(explore_str) == false {
+        if !check_input_chars(explore_str) {
             error!("Encountered invalid exploration path.");
             return Err(RetrieverError::InvalidExplorationPath);
         }
@@ -146,12 +142,12 @@ pub fn split_path_steps(input: &str) -> Vec<String> {
 
 pub fn step_is_range(step: &str) -> bool {
     let range_regex = Regex::new(r"^\d*(\.\.)?\d+[h'a]?$").unwrap();
-    range_regex.is_match(&step)
+    range_regex.is_match(step)
 }
 
 pub fn step_is_wildcard(step: &str) -> bool {
     let wildcard_regex = Regex::new(r"^\*[h'a]?$").unwrap();
-    wildcard_regex.is_match(&step)
+    wildcard_regex.is_match(step)
 }
 
 pub fn check_step_sanity(step: String) -> bool {

@@ -21,7 +21,7 @@ use crate::{
     explorer::Explorer,
     path_pairs::{PathDescriptorPair, PathScanResultDescriptorTrio},
     setting::RetrieverSetting,
-    uspk_set::{USPKSetStatus, UnspentScriptPupKeysSet},
+    uspk_set::{UnspentScriptPupKeysSet, UspkSetStatus},
 };
 
 #[derive(Debug)]
@@ -85,7 +85,7 @@ impl Retriever {
     }
 
     pub async fn populate_uspk_set(&mut self) -> Result<(), RetrieverError> {
-        if self.uspk_set.get_status() == USPKSetStatus::Empty {
+        if self.uspk_set.get_status() == UspkSetStatus::Empty {
             info!("Searching for the dump file to populate the Unspent ScriptPubKey set.");
             let dump_file_path_str = format!("{}/utxo_dump.dat", self.data_dir);
             let dump_file_path = PathBuf::from_str(&dump_file_path_str).unwrap();
@@ -95,11 +95,11 @@ impl Retriever {
             }
             info!("Dump file found.");
             let _ = tokio::join!({ self.uspk_set.populate_with_dump_file(&dump_file_path_str) });
-            return Ok(());
-        } else if self.uspk_set.get_status() == USPKSetStatus::Populating {
-            return Err(RetrieverError::PopulatingUSPKSetInProgress);
+            Ok(())
+        } else if self.uspk_set.get_status() == UspkSetStatus::Populating {
+            Err(RetrieverError::PopulatingUSPKSetInProgress)
         } else {
-            return Err(RetrieverError::USPKSetAlreadyPopulated);
+            Err(RetrieverError::USPKSetAlreadyPopulated)
         }
     }
 
@@ -178,7 +178,7 @@ impl Retriever {
                 let desc_pubkey = desc.script_pubkey();
                 let target = desc_pubkey.as_bytes();
                 if uspk_set.contains(target) {
-                    warn!("Found a non-empty ScriptPubKey.");
+                    warn!("Found a UTXO match for ScriptPubKey.");
                     self.finds
                         .lock()
                         .unwrap()
@@ -187,12 +187,12 @@ impl Retriever {
             }
             if select_descriptors.contains(&CoveredDescriptors::P2pkh) {
                 let desc = Descriptor::new_pkh(pubkey)
-                    .map_err(|err| RetrieverError::from(err))
+                    .map_err(RetrieverError::from)
                     .unwrap();
                 let desc_pubkey = desc.script_pubkey();
                 let target = desc_pubkey.as_bytes();
                 if uspk_set.contains(target) {
-                    warn!("Found a non-empty ScriptPubKey.");
+                    warn!("Found a UTXO match for ScriptPubKey.");
                     self.finds
                         .lock()
                         .unwrap()
@@ -201,12 +201,12 @@ impl Retriever {
             }
             if select_descriptors.contains(&CoveredDescriptors::P2wpkh) {
                 let desc = Descriptor::new_wpkh(pubkey)
-                    .map_err(|err| RetrieverError::from(err))
+                    .map_err(RetrieverError::from)
                     .unwrap();
                 let desc_pubkey = desc.script_pubkey();
                 let target = desc_pubkey.as_bytes();
                 if uspk_set.contains(target) {
-                    warn!("Found a non-empty ScriptPubKey.");
+                    warn!("Found a UTXO match for ScriptPubKey.");
                     self.finds
                         .lock()
                         .unwrap()
@@ -215,12 +215,12 @@ impl Retriever {
             }
             if select_descriptors.contains(&CoveredDescriptors::P2shwpkh) {
                 let desc = Descriptor::new_sh_wpkh(pubkey)
-                    .map_err(|err| RetrieverError::from(err))
+                    .map_err(RetrieverError::from)
                     .unwrap();
                 let desc_pubkey = desc.script_pubkey();
                 let target = desc_pubkey.as_bytes();
                 if uspk_set.contains(target) {
-                    warn!("Found a non-empty ScriptPubKey.");
+                    warn!("Found a UTXO match for ScriptPubKey.");
                     self.finds
                         .lock()
                         .unwrap()
@@ -229,12 +229,12 @@ impl Retriever {
             }
             if select_descriptors.contains(&CoveredDescriptors::P2tr) {
                 let desc = Descriptor::new_tr(pubkey, None)
-                    .map_err(|err| RetrieverError::from(err))
+                    .map_err(RetrieverError::from)
                     .unwrap();
                 let desc_pubkey = desc.script_pubkey();
                 let target = desc_pubkey.as_bytes();
                 if uspk_set.contains(target) {
-                    warn!("Found a non-empty ScriptPubKey.");
+                    warn!("Found a UTXO match for ScriptPubKey.");
                     self.finds
                         .lock()
                         .unwrap()
@@ -257,8 +257,8 @@ impl Retriever {
         //     return Err(RetrieverError::NoSearchHasBeenPerformed);
         // } else
         if self.finds.lock().unwrap().is_empty() {
-            println!("No bitcoins were found in the explored paths.");
-            return Ok(());
+            println!("No UTXO match were found in the explored paths.");
+            Ok(())
         } else {
             let path_scan_request_pairs = self
                 .finds
@@ -280,13 +280,13 @@ impl Retriever {
             let info = format!(
                 "\nResult {}\nPath: {}\nAmount(satoshis): {}\nDescriptor: {}",
                 index + 1,
-                detail.0.to_string(),
+                detail.0,
                 detail
                     .1
                     .total_amount
                     .to_sat()
                     .to_formatted_string(&Locale::en),
-                detail.2.to_string()
+                detail.2
             );
             println!("{info}");
         }

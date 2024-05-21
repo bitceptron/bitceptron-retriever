@@ -61,13 +61,13 @@ impl Iterator for ExplorationStep {
                 )),
                 ExplorationStepHardness::Normal => Some(format!(
                     "{}",
-                    self.start_inclusive + self.iterator_position as u32
+                    self.start_inclusive + self.iterator_position
                 )),
                 ExplorationStepHardness::HardenedAndNormal => {
                     if self.iterator_position < size / 2 {
                         Some(format!(
                             "{}'",
-                            self.start_inclusive + self.iterator_position as u32
+                            self.start_inclusive + self.iterator_position
                         ))
                     } else {
                         Some(format!(
