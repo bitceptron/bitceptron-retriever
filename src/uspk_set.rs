@@ -21,7 +21,7 @@ impl UnspentScriptPupKeysSet {
         let mut dump = txoutset::Dump::new(dump_file_path, txoutset::ComputeAddresses::No)?;
         // Loop information.
         let step_size = 100u64;
-        let mut average_step_time_in_milis = 0u128;
+        let mut average_step_time_in_micros = 0u128;
         let total_loops = dump.utxo_set_size;
         let mut loops_done = 0u64;
         let mut steps_done = 0u128;
@@ -35,16 +35,16 @@ impl UnspentScriptPupKeysSet {
             if loops_done % step_size == 0 {
                 steps_done += 1;
                 steps_remaining -= 1;
-                average_step_time_in_milis = (step_start_time.elapsed().as_millis()
-                    + (steps_done - 1) * average_step_time_in_milis)
+                average_step_time_in_micros = (step_start_time.elapsed().as_micros()
+                    + (steps_done - 1) * average_step_time_in_micros)
                     / steps_done as u128;
-                let remaining_time_in_milis = average_step_time_in_milis * steps_remaining;
+                let remaining_time_in_milis = average_step_time_in_micros * steps_remaining;
                 info!(
                     "Utxos moved to database: {} of {}",
                     loops_done.to_formatted_string(&Locale::en),
                     total_loops.to_formatted_string(&Locale::en)
                 );
-                info!("Estimated time to completion: ~{} minutes.", (1 + remaining_time_in_milis / 60_000).to_formatted_string(&Locale::en));
+                info!("Estimated time to completion: ~{} minutes.", (1 + remaining_time_in_milis / 60_000_000).to_formatted_string(&Locale::en));
                 step_start_time = Instant::now();
             }
         }

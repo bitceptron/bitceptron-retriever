@@ -1,15 +1,68 @@
-use std::{fs, path::PathBuf, str::FromStr};
+use std::{fs, io::BufRead, path::PathBuf, process::{Command, Stdio}, str::FromStr, thread::sleep, time::Duration};
 
 use bitceptron_retriever::{retriever::Retriever, setting::RetrieverSetting};
 use tracing_log::LogTracer;
 
+const BITCOIND_PATH: &str = "tests/bitcoind";
+const BITCOIN_CONF_PATH: &str = "tests/bitcoin.conf";
 const REGTEST_PORTS: [&str; 2] = ["18998", "18999"];
-const TEMP_DIR_PATH: &str = "tests/temp";
-
+const TEMP_DIR_PATH: &str = "/Users/bedlam/Desktop";
+/// This example uses an already existing utxo_dump.dat file. So, make sure the temp dir path exists and 
+/// contains the utxo_dump.dat file.
 #[tokio::main]
 async fn main() {
     LogTracer::init().unwrap();
     tracing::subscriber::set_global_default(tracing_subscriber::FmtSubscriber::new()).unwrap();
+// Finding any bitcoind process using regtest ports.
+    let pid_of_processes_using_ports: Vec<String> = Command::new("lsof")
+        .args([
+            "-i",
+            format!(":{}", REGTEST_PORTS.join(",")).as_str(),
+            "-a",
+            "-c",
+            "bitcoind",
+            "-t",
+        ])
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap()
+        .wait_with_output()
+        .unwrap()
+        .stdout
+        .lines()
+        .map(|line| line.unwrap())
+        .collect();
+    // Killing if any.
+    if !pid_of_processes_using_ports.is_empty() {
+        for pid in pid_of_processes_using_ports {
+            let _ = Command::new("kill")
+                .args(["-9", format!("{}", pid.as_str()).as_str()])
+                .spawn()
+                .unwrap()
+                .wait();
+        }
+    };
+    // Remove regtest from temp dir.
+    let _ = fs::remove_dir_all(format!("{}/regtest", TEMP_DIR_PATH));
+    // Copy bitcoin.conf to temp.
+    let _ = fs::copy(BITCOIN_CONF_PATH, format!("{}/bitcoin.conf", TEMP_DIR_PATH)).unwrap();
+
+    // Run the regtest daemon.
+    Command::new(BITCOIND_PATH.to_owned())
+        .args([
+            "-regtest",
+            "-daemon",
+            format!("-port={}", REGTEST_PORTS[0]).as_str(),
+            format!("-rpcport={}", REGTEST_PORTS[1]).as_str(),
+            format!("-datadir={}", TEMP_DIR_PATH).as_str(),
+            format!("-conf={}", "bitcoin.conf").as_str(),
+        ])
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Couldn't run bitcoind.")
+        .wait_with_output()
+        .unwrap();
+    sleep(Duration::from_millis(1000));
 
     // Create our own address.
     let mnemonic_str =
@@ -42,12 +95,7 @@ async fn main() {
     let _ = ret.search_the_uspk_set().await.unwrap();
     let _ = ret.get_details_of_finds_from_bitcoincore();
     let _ = ret.print_detailed_finds_on_console();
-    assert_eq!(
-        ret.get_detailed_finds()
-            .unwrap()
-            .iter()
-            .fold(0u64, |acc, trio| acc
-                + trio.get_scan_result().total_amount.to_sat()),
-        4200000000
-    );
+    
+    // Remove regtest from temp dir.
+    let _ = fs::remove_dir_all(format!("{}/regtest", TEMP_DIR_PATH));
 }
