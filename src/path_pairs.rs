@@ -14,17 +14,6 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PathScriptPubKeyBytesPair(DerivationPath, Vec<u8>);
 
-// impl PathScriptPubKeyBytesPair {
-//     pub fn new(path: DerivationPath, descriptor: Descriptor<PublicKey>) -> Self {
-//         PathScriptPubKeyBytesPair(path, descriptor.script_pubkey().to_bytes())
-//     }
-
-//     pub fn to_path_descriptor_string(&self) -> PathDescriptorStringPair {
-//         let spk = ScriptBuf::from_bytes(self.1).to;
-//         PathDescriptorStringPair::new(self.0.clone(), Descriptor::fr)
-//     }
-// }
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PathDescriptorPair(pub(crate) DerivationPath, pub(crate) Descriptor<PublicKey>);
 
