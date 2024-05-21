@@ -14,7 +14,7 @@ use tracing::{error, info, warn};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::{
-    client::{dump_utxout_set_result::DumpTxoutSetResult, BitcoincoreRpcClient},
+    client::BitcoincoreRpcClient,
     covered_descriptors::CoveredDescriptors,
     data::defaults::DEFAULT_SELECTED_DESCRIPTORS,
     error::RetrieverError,
@@ -30,7 +30,6 @@ pub struct Retriever {
     explorer: Arc<Explorer>,
     uspk_set: UnspentScriptPupKeysSet,
     data_dir: String,
-    dump_result: Option<DumpTxoutSetResult>,
     finds: Arc<Mutex<Vec<PathDescriptorPair>>>,
     detailed_finds: Option<Vec<PathScanResultDescriptorTrio>>,
     select_descriptors: hashbrown::HashSet<CoveredDescriptors>,
@@ -43,7 +42,6 @@ impl Retriever {
         let explorer_setting = setting.get_explorer_setting();
         let client = BitcoincoreRpcClient::new(client_setting).await?;
         let explorer = Arc::new(Explorer::new(explorer_setting)?);
-        // let uspk_set = Arc::new(Mutex::new(UnspentScriptPupKeysSet::new()));
         let uspk_set = UnspentScriptPupKeysSet::new();
         let data_dir = fs::canonicalize(setting.get_data_dir())?
             .to_string_lossy()
@@ -59,14 +57,15 @@ impl Retriever {
             explorer,
             uspk_set,
             data_dir,
-            dump_result: None,
             finds,
             detailed_finds: None,
             select_descriptors,
         })
     }
 
-    pub async fn check_for_dump_in_data_dir_or_create_dump_file(&mut self) -> Result<(), RetrieverError> {
+    pub async fn check_for_dump_in_data_dir_or_create_dump_file(
+        &mut self,
+    ) -> Result<(), RetrieverError> {
         let data_dir_path = PathBuf::from_str(&self.data_dir).unwrap();
         let mut dump_file_path = data_dir_path.clone();
         dump_file_path.extend(["utxo_dump.dat"]);
@@ -80,8 +79,7 @@ impl Retriever {
                 info!("Creating the full datadir path.");
                 fs::create_dir_all(data_dir_path)?;
             }
-            let dump_result = self.client.dump_utxo_set(&self.data_dir).await?;
-            self.dump_result = Some(dump_result);
+            let _dump_result = self.client.dump_utxo_set(&self.data_dir).await?;
             Ok(())
         }
     }
@@ -96,9 +94,7 @@ impl Retriever {
                 return Err(RetrieverError::NoDumpFileInDataDir);
             }
             info!("Dump file found.");
-            let _ = tokio::join!({
-                self.uspk_set.populate_with_dump_file(&dump_file_path_str)
-            });
+            let _ = tokio::join!({ self.uspk_set.populate_with_dump_file(&dump_file_path_str) });
             return Ok(());
         } else if self.uspk_set.get_status() == USPKSetStatus::Populating {
             return Err(RetrieverError::PopulatingUSPKSetInProgress);
@@ -311,7 +307,6 @@ impl Zeroize for Retriever {
         self.client.zeroize();
         // self.explorer.as_ref().zeroize();
         self.data_dir.zeroize();
-        self.dump_result.zeroize();
     }
 }
 
