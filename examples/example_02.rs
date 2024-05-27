@@ -87,7 +87,7 @@ async fn main() {
             .to_string_lossy()
             .to_string(),
     );
-    let mut ret = Retriever::new(setting).await.unwrap();
+    let mut ret = Retriever::new(&setting).await.unwrap();
     let _ = ret
         .check_for_dump_in_data_dir_or_create_dump_file().await
         .unwrap();

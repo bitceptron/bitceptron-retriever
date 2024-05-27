@@ -9,3 +9,4 @@ pub const DEFAULT_SWEEP: bool = false;
 pub const DEFAULT_NETWORK: bitcoin::Network = bitcoin::Network::Bitcoin;
 pub const DEFAULT_SELECTED_DESCRIPTORS: [CoveredDescriptors; 5] =
     [P2pk, P2pkh, P2shwpkh, P2tr, P2wpkh];
+
