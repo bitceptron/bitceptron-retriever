@@ -187,7 +187,7 @@ async fn main() {
             .to_string_lossy()
             .to_string(),
     );
-    let mut ret = join!(Retriever::new(&setting)).0.unwrap();
+    let mut ret = join!(Retriever::new(setting)).0.unwrap();
     let _ = join!(ret.check_for_dump_in_data_dir_or_create_dump_file());
     let _ = join!(ret.populate_uspk_set());
     let _ = join!(ret.search_the_uspk_set());

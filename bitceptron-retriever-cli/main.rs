@@ -23,7 +23,7 @@ async fn main() {
     let setting = RetrieverSetting::from_config_file(config_file_path_string)
         .map_err(|err| panic!("Error while reading the config file: {:#?}", err))
         .unwrap();
-    let mut ret = Retriever::new(&setting).await
+    let mut ret = Retriever::new(setting).await
         .map_err(|err| panic!("Error while creating the retriever: {:#?}", err))
         .unwrap();
     ret
