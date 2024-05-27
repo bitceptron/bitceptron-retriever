@@ -19,7 +19,7 @@ use crate::{
     explorer::explorer_setting::ExplorerSetting,
 };
 
-#[derive(Debug, Serialize, Deserialize, Getters)]
+#[derive(Debug, Serialize, Deserialize, Getters, Clone)]
 #[get = "pub with_prefix"]
 pub struct RetrieverSetting {
     bitcoincore_rpc_url: Option<String>,
