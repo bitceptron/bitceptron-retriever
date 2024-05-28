@@ -6,6 +6,7 @@ use std::{
 };
 
 use bitcoin::{bip32::DerivationPath, key::Secp256k1};
+use getset::Getters;
 use itertools::Itertools;
 use miniscript::Descriptor;
 use num_format::{Locale, ToFormattedString};
@@ -24,7 +25,8 @@ use crate::{
     uspk_set::{UnspentScriptPupKeysSet, UspkSetStatus},
 };
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Getters)]
+#[get="pub"]
 pub struct Retriever {
     client: BitcoincoreRpcClient,
     explorer: Arc<Explorer>,
