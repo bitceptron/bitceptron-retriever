@@ -8,7 +8,7 @@ use tracing::info;
 
 use crate::error::RetrieverError;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnspentScriptPupKeysSet {
     set: Arc<hashbrown::HashSet<Vec<u8>>>,
     status: Arc<Mutex<Vec<UspkSetStatus>>>,

@@ -24,7 +24,7 @@ use crate::{
     uspk_set::{UnspentScriptPupKeysSet, UspkSetStatus},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Retriever {
     client: BitcoincoreRpcClient,
     explorer: Arc<Explorer>,

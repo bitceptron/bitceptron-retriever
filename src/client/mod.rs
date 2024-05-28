@@ -14,7 +14,7 @@ use crate::{
 
 use self::{client_setting::ClientSetting, dump_utxout_set_result::DumpTxoutSetResult};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BitcoincoreRpcClient {
     client: Arc<bitcoincore_rpc::Client>,
 }
