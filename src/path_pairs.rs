@@ -74,9 +74,9 @@ impl ZeroizeOnDrop for PathScanRequestDescriptorTrio {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PathScanResultDescriptorTrio(
-    pub(crate) DerivationPath,
-    pub(crate) ScanTxOutResult,
-    pub(crate) Descriptor<PublicKey>,
+    pub DerivationPath,
+    pub ScanTxOutResult,
+    pub Descriptor<PublicKey>,
 );
 
 impl PathScanResultDescriptorTrio {
