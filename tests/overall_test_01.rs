@@ -126,7 +126,7 @@ async fn test_with_regtest() {
     // Mine to mine the transaction.
     let _ = client.generate_to_address(50, &mining_address);
     // Now retrieve.
-    let setting = Arc::new(RetrieverSetting::new(
+    let setting = RetrieverSetting::new(
         Some("127.0.0.1".to_string()),
         Some(REGTEST_PORTS[1].to_string()),
         format!("{}/regtest/.cookie", TEMP_DIR_PATH),
@@ -143,7 +143,7 @@ async fn test_with_regtest() {
             .unwrap()
             .to_string_lossy()
             .to_string(),
-    ));
+    );
     let mut ret = join!(Retriever::new(setting)).0.unwrap();
     let _ = join!(ret.check_for_dump_in_data_dir_or_create_dump_file());
     let _ = join!(ret.populate_uspk_set());

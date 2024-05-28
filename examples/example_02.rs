@@ -69,7 +69,7 @@ async fn main() {
         "response tag season adapt huge win catalog correct harbor cruise result east";
 
     // Now retrieve.
-    let setting = Arc::new(RetrieverSetting::new(
+    let setting = RetrieverSetting::new(
         Some("127.0.0.1".to_string()),
         Some(REGTEST_PORTS[1].to_string()),
         format!("{}/regtest/.cookie", TEMP_DIR_PATH),
@@ -86,7 +86,7 @@ async fn main() {
             .unwrap()
             .to_string_lossy()
             .to_string(),
-    ));
+    );
     let mut ret = Retriever::new(setting).await.unwrap();
     let _ = ret
         .check_for_dump_in_data_dir_or_create_dump_file().await

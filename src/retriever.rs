@@ -38,7 +38,7 @@ pub struct Retriever {
 }
 
 impl Retriever {
-    pub async fn new(setting: Arc<RetrieverSetting>) -> Result<Self, RetrieverError> {
+    pub async fn new(setting: RetrieverSetting) -> Result<Self, RetrieverError> {
         info!("Creation of retriever started.");
         let client_setting = setting.get_client_setting();
         let explorer_setting = setting.get_explorer_setting();
