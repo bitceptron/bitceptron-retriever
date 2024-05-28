@@ -11,7 +11,7 @@ use crate::error::RetrieverError;
 
 use super::exploration_step::{ExplorationStep, ExplorationStepHardness};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash, Getters)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash, Getters, Default)]
 #[get = "pub with_prefix"]
 pub struct ExplorationPath {
     base_paths: Vec<DerivationPath>,

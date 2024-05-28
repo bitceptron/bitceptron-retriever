@@ -28,6 +28,17 @@ pub struct Explorer {
     exploration_path: Arc<ExplorationPath>,
 }
 
+impl Default for Explorer {
+    fn default() -> Self {
+        Self {
+            master_xpriv: Arc::new(
+                Xpriv::new_master(bitcoin::Network::Bitcoin, &[0u8; 64]).unwrap(),
+            ),
+            exploration_path: Default::default(),
+        }
+    }
+}
+
 impl Explorer {
     pub fn new(setting: ExplorerSetting) -> Result<Self, RetrieverError> {
         info!("Creation of explorer started.");
@@ -60,7 +71,6 @@ impl Zeroize for Explorer {
 }
 
 impl ZeroizeOnDrop for Explorer {}
-
 
 #[cfg(test)]
 mod tests {}

@@ -19,6 +19,12 @@ pub struct BitcoincoreRpcClient {
     client: Arc<bitcoincore_rpc::Client>,
 }
 
+impl Default for BitcoincoreRpcClient {
+    fn default() -> Self {
+        Self { client: Arc::new(bitcoincore_rpc::Client::new("0.0.0.0", Auth::None).unwrap()) }
+    }
+}
+
 impl BitcoincoreRpcClient {
     pub async fn new(setting: ClientSetting) -> Result<Self, RetrieverError> {
         info!("Creation of bitcoincore rpc client started.");
