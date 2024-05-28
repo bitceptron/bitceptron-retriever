@@ -14,6 +14,20 @@ pub struct ExplorerSetting {
     sweep: bool,
 }
 
+impl Default for ExplorerSetting {
+    fn default() -> Self {
+        Self {
+            mnemonic: Default::default(),
+            passphrase: Default::default(),
+            base_derivation_paths: Default::default(),
+            exploration_path: Default::default(),
+            exploration_depth: Default::default(),
+            network: bitcoin::Network::Bitcoin,
+            sweep: Default::default(),
+        }
+    }
+}
+
 impl ExplorerSetting {
     pub fn new(
         mnemonic: String,

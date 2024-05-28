@@ -2,7 +2,7 @@ use getset::Getters;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Settings used for creating a bitcoincore rpc client.
-#[derive(Debug, Zeroize, ZeroizeOnDrop, Getters)]
+#[derive(Debug, Zeroize, ZeroizeOnDrop, Getters, Default)]
 #[get = "pub with_prefix"]
 pub struct ClientSetting {
     rpc_url: String,
