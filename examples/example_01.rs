@@ -1,11 +1,5 @@
 use std::{
-    fs,
-    io::BufRead,
-    path::PathBuf,
-    process::{Command, Stdio},
-    str::FromStr,
-    thread::sleep,
-    time::Duration,
+    fs, io::BufRead, path::PathBuf, process::{Command, Stdio}, str::FromStr, sync::Arc, thread::sleep, time::Duration
 };
 
 use bip39::Mnemonic;
@@ -169,7 +163,7 @@ async fn main() {
     // Mine to mine the transaction.
     let _ = client.generate_to_address(50, &mining_address);
     // Now retrieve.
-    let setting = RetrieverSetting::new(
+    let setting = Arc::new(RetrieverSetting::new(
         Some("127.0.0.1".to_string()),
         Some(REGTEST_PORTS[1].to_string()),
         format!("{}/regtest/.cookie", TEMP_DIR_PATH),
@@ -186,7 +180,7 @@ async fn main() {
             .unwrap()
             .to_string_lossy()
             .to_string(),
-    );
+    ));
     let mut ret = join!(Retriever::new(setting)).0.unwrap();
     let _ = join!(ret.check_for_dump_in_data_dir_or_create_dump_file());
     let _ = join!(ret.populate_uspk_set());

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bitceptron_retriever::{retriever::Retriever, setting::RetrieverSetting};
 use clap::{Arg, Command};
 use tracing_log::LogTracer;
@@ -20,9 +22,9 @@ async fn main() {
 
     let config_file_path_string = matches.get_one::<String>("conf").expect("required");
 
-    let setting = RetrieverSetting::from_config_file(config_file_path_string)
+    let setting = Arc::new(RetrieverSetting::from_config_file(config_file_path_string)
         .map_err(|err| panic!("Error while reading the config file: {:#?}", err))
-        .unwrap();
+        .unwrap());
     let mut ret = Retriever::new(setting).await
         .map_err(|err| panic!("Error while creating the retriever: {:#?}", err))
         .unwrap();
