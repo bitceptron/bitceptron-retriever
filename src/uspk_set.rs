@@ -9,21 +9,21 @@ use tracing::info;
 use crate::error::RetrieverError;
 
 #[derive(Debug, Clone)]
-pub struct UnspentScriptPupKeysSet {
+pub struct UnspentScriptPubKeysSet {
     set: Arc<hashbrown::HashSet<Vec<u8>>>,
     status: Arc<Mutex<Vec<UspkSetStatus>>>,
 }
 
-impl Default for UnspentScriptPupKeysSet {
+impl Default for UnspentScriptPubKeysSet {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl UnspentScriptPupKeysSet {
+impl UnspentScriptPubKeysSet {
     pub fn new() -> Self {
         let set: hashbrown::HashSet<Vec<u8>> = hashbrown::HashSet::new();
-        UnspentScriptPupKeysSet {
+        UnspentScriptPubKeysSet {
             set: Arc::new(set),
             status: Arc::new(Mutex::new(vec![UspkSetStatus::Empty])),
         }

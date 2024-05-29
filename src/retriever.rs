@@ -22,15 +22,15 @@ use crate::{
     explorer::Explorer,
     path_pairs::{PathDescriptorPair, PathScanResultDescriptorTrio},
     setting::RetrieverSetting,
-    uspk_set::{UnspentScriptPupKeysSet, UspkSetStatus},
+    uspk_set::{UnspentScriptPubKeysSet, UspkSetStatus},
 };
 
 #[derive(Debug, Clone, Default, Getters)]
-#[get="pub"]
+#[get = "pub"]
 pub struct Retriever {
     client: BitcoincoreRpcClient,
     explorer: Arc<Explorer>,
-    uspk_set: UnspentScriptPupKeysSet,
+    uspk_set: UnspentScriptPubKeysSet,
     data_dir: String,
     finds: Arc<Mutex<Vec<PathDescriptorPair>>>,
     detailed_finds: Option<Vec<PathScanResultDescriptorTrio>>,
@@ -44,7 +44,7 @@ impl Retriever {
         let explorer_setting = setting.get_explorer_setting();
         let client = BitcoincoreRpcClient::new(client_setting).await?;
         let explorer = Arc::new(Explorer::new(explorer_setting)?);
-        let uspk_set = UnspentScriptPupKeysSet::new();
+        let uspk_set = UnspentScriptPubKeysSet::new();
         let data_dir = fs::canonicalize(setting.get_data_dir())?
             .to_string_lossy()
             .to_string();
