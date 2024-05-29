@@ -21,7 +21,9 @@ pub struct BitcoincoreRpcClient {
 
 impl Default for BitcoincoreRpcClient {
     fn default() -> Self {
-        Self { client: Arc::new(bitcoincore_rpc::Client::new("0.0.0.0", Auth::None).unwrap()) }
+        Self {
+            client: Arc::new(bitcoincore_rpc::Client::new("0.0.0.0", Auth::None).unwrap()),
+        }
     }
 }
 
@@ -112,8 +114,8 @@ impl BitcoincoreRpcClient {
             info!("Bitcoincore scan for details completed.");
             let _ = results_sender.send(Ok(results));
         });
-
-        results_receiver.recv().await.unwrap()
+        let results = results_receiver.recv().await.unwrap();
+        results
     }
 }
 
