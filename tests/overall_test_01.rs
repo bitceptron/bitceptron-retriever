@@ -1,5 +1,11 @@
 use std::{
-    fs, io::BufRead, path::PathBuf, process::{Command, Stdio}, str::FromStr, sync::Arc, thread::sleep, time::Duration
+    fs,
+    io::BufRead,
+    path::PathBuf,
+    process::{Command, Stdio},
+    str::FromStr,
+    thread::sleep,
+    time::Duration,
 };
 
 use bip39::Mnemonic;

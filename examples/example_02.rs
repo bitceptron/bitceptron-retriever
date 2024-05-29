@@ -1,4 +1,12 @@
-use std::{fs, io::BufRead, path::PathBuf, process::{Command, Stdio}, str::FromStr, sync::Arc, thread::sleep, time::Duration};
+use std::{
+    fs,
+    io::BufRead,
+    path::PathBuf,
+    process::{Command, Stdio},
+    str::FromStr,
+    thread::sleep,
+    time::Duration,
+};
 
 use bitceptron_retriever::{retriever::Retriever, setting::RetrieverSetting};
 use tracing_log::LogTracer;
@@ -7,13 +15,13 @@ const BITCOIND_PATH: &str = "tests/bitcoind";
 const BITCOIN_CONF_PATH: &str = "tests/bitcoin.conf";
 const REGTEST_PORTS: [&str; 2] = ["18998", "18999"];
 const TEMP_DIR_PATH: &str = "/Users/bedlam/Desktop";
-/// This example uses an already existing utxo_dump.dat file. So, make sure the temp dir path exists and 
+/// This example uses an already existing utxo_dump.dat file. So, make sure the temp dir path exists and
 /// contains the utxo_dump.dat file.
 #[tokio::main]
 async fn main() {
     LogTracer::init().unwrap();
     tracing::subscriber::set_global_default(tracing_subscriber::FmtSubscriber::new()).unwrap();
-// Finding any bitcoind process using regtest ports.
+    // Finding any bitcoind process using regtest ports.
     let pid_of_processes_using_ports: Vec<String> = Command::new("lsof")
         .args([
             "-i",
@@ -89,13 +97,14 @@ async fn main() {
     );
     let mut ret = Retriever::new(setting).await.unwrap();
     let _ = ret
-        .check_for_dump_in_data_dir_or_create_dump_file().await
+        .check_for_dump_in_data_dir_or_create_dump_file()
+        .await
         .unwrap();
     let _ = ret.populate_uspk_set().await.unwrap();
     let _ = ret.search_the_uspk_set().await.unwrap();
     let _ = ret.get_details_of_finds_from_bitcoincore();
     let _ = ret.print_detailed_finds_on_console();
-    
+
     // Remove regtest from temp dir.
     let _ = fs::remove_dir_all(format!("{}/regtest", TEMP_DIR_PATH));
 }

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bitceptron_retriever::{retriever::Retriever, setting::RetrieverSetting};
 use clap::{Arg, Command};
 use tracing_log::LogTracer;
@@ -25,11 +23,12 @@ async fn main() {
     let setting = RetrieverSetting::from_config_file(config_file_path_string)
         .map_err(|err| panic!("Error while reading the config file: {:#?}", err))
         .unwrap();
-    let mut ret = Retriever::new(setting).await
+    let mut ret = Retriever::new(setting)
+        .await
         .map_err(|err| panic!("Error while creating the retriever: {:#?}", err))
         .unwrap();
-    ret
-        .check_for_dump_in_data_dir_or_create_dump_file().await
+    ret.check_for_dump_in_data_dir_or_create_dump_file()
+        .await
         .map_err(|err| {
             panic!(
                 "Error while checking/creating dump file in data dir: {:#?}",
@@ -37,16 +36,16 @@ async fn main() {
             )
         })
         .unwrap();
-    ret
-        .populate_uspk_set().await
+    ret.populate_uspk_set()
+        .await
         .map_err(|err| panic!("Error while populating in-memory UTXO database: {:#?}", err))
         .unwrap();
-    ret
-        .search_the_uspk_set().await
+    ret.search_the_uspk_set()
+        .await
         .map_err(|err| panic!("Error while searching in-memory UTXO database: {:#?}", err))
         .unwrap();
-    ret
-        .get_details_of_finds_from_bitcoincore().await
+    ret.get_details_of_finds_from_bitcoincore()
+        .await
         .map_err(|err| {
             panic!(
                 "Error while fetching details of finds from bitcoincore: {:#?}",
