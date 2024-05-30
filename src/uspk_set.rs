@@ -37,7 +37,7 @@ impl UnspentScriptPubKeysSet {
         let (set_sender, set_receiver) = tokio::sync::oneshot::channel();
         let mut dump = txoutset::Dump::new(dump_file_path, txoutset::ComputeAddresses::No)?;
         // Loop information.
-        let step_size = 100u64;
+        let step_size = 100000u64;
         let mut average_step_time_in_micros = 0u128;
         let total_loops = dump.utxo_set_size;
         let mut loops_done = 0u64;

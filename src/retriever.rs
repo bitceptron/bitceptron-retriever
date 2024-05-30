@@ -112,7 +112,7 @@ impl Retriever {
         let explorer = self.explorer.clone();
         let bases = explorer.get_exploration_path().get_base_paths().to_owned();
         let num_explore_paths = self.explorer.get_exploration_path().size();
-        let total_paths = num_explore_paths * bases.len();
+        let total_paths = num_explore_paths;
         let mut sent_paths = 0;
         tokio::spawn(async move {
             info!(

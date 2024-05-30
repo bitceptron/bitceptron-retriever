@@ -169,6 +169,7 @@ async fn main() {
     // Mine to mine the transaction.
     let _ = client.generate_to_address(50, &mining_address);
     // Now retrieve.
+    let bases = "m;m/84'/0'/0'/0/0;m/45'/0'/0'/0/0;m/0';m/49'/0'/2147483647';m/44'/0'/0';m/44'/145'/0';m/44';m/49/0;m/44'/0'/2147483647';m/0'/0';m/44'/133'/0';m/48'/0'/0'/2'/0;m/48'/0'/0'/2';m/48'/0'/0'/2'/1;m/84'/0'/0';m/86'/0'/0';m/49'/0';m/84'/0'/2147483644';m/141'/0'/0';m/84'/0';m/44'/0'/1';m/44'/0';m/49'/0'/0';m/0;m/48'/0'/0';m/84'/0'/2147483647';m/44'/1'/0';m/44'/0'/0'/0/0;m/47'/0'/0';m/84'/0'/2147483645';m/84'/0'/2147483646';m/49'/0'/0'/0/0".split(";").map(|path| path.to_string()).collect::<Vec<_>>();
     let setting = RetrieverSetting::new(
         Some("127.0.0.1".to_string()),
         Some(REGTEST_PORTS[1].to_string()),
@@ -176,11 +177,11 @@ async fn main() {
         Some(10000),
         mnemonic_str.to_string(),
         "".to_string(),
-        Some(vec!["m/0".to_string()]),
-        Some("*a/*a/*a".to_string()),
+        Some(bases),
+        Some("*".to_string()),
         None,
-        Some(false),
-        Some(10),
+        Some(true),
+        Some(100),
         Some(bitcoin::Network::Regtest),
         fs::canonicalize(PathBuf::from_str(TEMP_DIR_PATH).unwrap())
             .unwrap()
